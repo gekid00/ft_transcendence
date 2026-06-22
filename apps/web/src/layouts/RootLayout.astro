@@ -1,0 +1,314 @@
+---
+/**
+ * RootLayout — html shell shared by every page.
+ *
+ * Composition:
+ *   <body>
+ *     [skip-to-content link]
+ *     <TopNav />            (floating pill, fixed)
+ *     <slot />              (page content)
+ *     <SiteFooter />        (only when showFooter prop is true —
+ *                            marketing + onboarding pages only)
+ *   </body>
+ *
+ * The body is flex column + min-h-svh so the footer (when shown) stays at
+ * the bottom even when a page's content is short. App-shell pages
+ * (/profile, /play, …) opt out of the footer entirely.
+ */
+import "~/styles/globals.css";
+import TopNav from "~/components/TopNav.astro";
+import SiteFooter from "~/components/SiteFooter.astro";
+import { getCurrentUser } from "~/lib/auth";
+
+interface Props {
+  title?: string;
+  description?: string;
+  /**
+   * Render <SiteFooter />? Footer carries marketing-shell links
+   * (About / How to play / Privacy / Terms) that are only relevant on
+   * marketing + onboarding pages — not inside the app shell. Default
+   * false; opt in from index.astro / login.astro / signup.astro.
+   */
+  showFooter?: boolean;
+  /**
+   * Render <TopNav />? Defaults to true. App-shell pages that own their
+   * own chrome (e.g. /profile while we figure out the authed-variant
+   * TopNav) can opt out.
+   */
+  showTopNav?: boolean;
+}
+
+const {
+  title = "4thewin",
+  description = "Connect 4, but smarter. Play the AI in your browser.",
+  showFooter = false,
+  showTopNav = true,
+} = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "http://localhost:4321").toString();
+
+// One backend call per request to drive the TopNav's authed/anon variant.
+// We fetch the full user (not just a boolean) so the topnav can render the
+// avatar squircle + initial without an extra round-trip on the client.
+// Adds ~5ms compose-internal. See apps/web/docs/authed-nav-roadmap.md.
+const user = await getCurrentUser(Astro);
+---
+
+<!doctype html>
+<html lang="en" data-pawn-skin={user?.pawnSkin ?? "default"}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    {/* Open Graph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+
+    {/* Twitter */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <title>{title}</title>
+
+    {/*
+      FOUC shield — inline critical initial states BEFORE the external
+      stylesheet loads.  Without this, the browser renders SSR HTML at
+      default browser styles (opacity: 1, static position, etc.), then
+      the external CSS arrives, causing a visible flash of unstyled content.
+
+      We define the initial state of `.page-reveal` elements (opacity: 0.001 and translateY(20px))
+      here to keep them hidden and positioned correctly before the external stylesheet loads
+      and triggers the fade-up animations. Because these are defined in a stylesheet block
+      (and not inline html style attributes), the animation's keyframes will cleanly override them
+      at runtime.
+    */}
+    <style is:inline>
+      .topnav-pill { position: fixed; top: 1.5rem; left: 50%; transform: translate(-50%, 0); }
+      .topnav-bar { position: fixed; top: 0; inset-inline: 0; }
+      .page-reveal { opacity: 0.001; transform: translateY(20px); }
+    </style>
+
+    {/*
+      Theme bootstrap — must run BEFORE paint to avoid FOUC.
+      Reads localStorage first, falls back to prefers-color-scheme.
+      Adds either `light` or `dark` class to <html>; never both.
+
+      Also wires the click handler for any [data-theme-toggle] button (used by
+      TopNav). Pure inline JS — no React island — so the icon is rendered by
+      Astro at SSR (with dark:hidden / dark:block CSS rules picking which one
+      shows) and there's no hydration flicker.
+    */}
+    <script is:inline>
+      (function () {
+        function setTheme(theme) {
+          var root = document.documentElement;
+          root.classList.remove("light", "dark");
+          root.classList.add(theme);
+          root.style.colorScheme = theme;
+
+          // Strip every transition for the duration of this paint if already loaded.
+          // Without this, body bg / pawn shadows / scrollbars snap
+          // instantly while elements with transition-colors slowly fade
+          // through gray — visible 'shimmer'. With it, the whole page
+          // changes mode in one frame (matches GitHub / Linear / Slack).
+          // Re-enabled on the next animation frame so user-initiated
+          // hover transitions resume working immediately afterwards.
+          if (document.readyState !== "loading") {
+            root.classList.add("disable-transitions");
+            // Force a reflow so the browser commits the no-transition state
+            // before any color changes paint, then drop the class.
+            // eslint-disable-next-line no-unused-expressions
+            void root.offsetHeight;
+            requestAnimationFrame(function () {
+              root.classList.remove("disable-transitions");
+            });
+          }
+        }
+
+        // Initial theme: localStorage → prefers-color-scheme → "light".
+        try {
+          var stored = localStorage.getItem("theme");
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var theme = stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+          setTheme(theme);
+        } catch (e) {
+          /* localStorage unavailable (private mode / file://) — fall through */
+        }
+
+        // Click handler — delegated on document so it works for any
+        // [data-theme-toggle] button across the app.
+        document.addEventListener("click", function (e) {
+          var btn = e.target && e.target.closest && e.target.closest("[data-theme-toggle]");
+          if (!btn) return;
+          var current = document.documentElement.classList.contains("dark") ? "dark" : "light";
+          var next = current === "dark" ? "light" : "dark";
+          setTheme(next);
+          try { localStorage.setItem("theme", next); } catch (e) {}
+          dispatchThemeChange();
+        });
+
+        // Follow OS preference live when the user hasn't explicitly chosen.
+        try {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (e) {
+            if (localStorage.getItem("theme") === null) {
+              setTheme(e.matches ? "dark" : "light");
+              dispatchThemeChange();
+            }
+          });
+        } catch (e) {}
+
+        // Dispatch a "themechange" event whenever the resolved theme
+        // (light/dark on <html>) changes. Listened to by SettingsAppearance
+        // so the radio reflects the actual state — including changes from
+        // the TopNav toggle, the OS-pref listener, and __4thewinSetTheme
+        // itself. Without this, the React island's local state can drift
+        // from the DOM (e.g. user toggles auto → clicks light on /settings
+        // → radio sticks on auto).
+        function dispatchThemeChange() {
+          try { window.dispatchEvent(new Event("themechange")); } catch (e) {}
+        }
+
+        // Expose a window-level API so React islands (e.g. SettingsAppearance)
+        // can drive the same code path. Accepts "light" | "dark" | "auto":
+        //   - light / dark: stores + applies
+        //   - auto: clears storage, picks based on prefers-color-scheme now
+        //     and lets the OS-preference listener take over going forward.
+        window.__4thewinSetTheme = function (theme) {
+          try {
+            if (theme === "auto") {
+              localStorage.removeItem("theme");
+              var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              setTheme(prefersDark ? "dark" : "light");
+            } else {
+              localStorage.setItem("theme", theme);
+              setTheme(theme);
+            }
+          } catch (e) {
+            // localStorage unavailable — apply the requested mode without persisting.
+            if (theme === "light" || theme === "dark") setTheme(theme);
+          }
+          dispatchThemeChange();
+        };
+        // Reads the current effective choice (light / dark / auto) for the
+        // /settings radio to initialise to.
+        window.__4thewinGetTheme = function () {
+          try {
+            var stored = localStorage.getItem("theme");
+            if (stored === "light" || stored === "dark") return stored;
+            return "auto";
+          } catch (e) {
+            return "auto";
+          }
+        };
+      })();
+    </script>
+  </head>
+  <body
+    class="flex min-h-svh flex-col font-sans md:h-svh md:overflow-hidden"
+    data-authenticated={user ? "true" : "false"}
+  >
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-foreground focus:px-3 focus:py-2 focus:text-background"
+    >
+      Skip to content
+    </a>
+    {showTopNav && <TopNav user={user} />}
+    <div class="hover-scrollbar flex flex-1 flex-col md:min-h-0 md:overflow-y-auto">
+      <slot />
+    </div>
+    {showFooter && <SiteFooter />}
+
+    {/* DEV: Grid overlay — disabled (debug tool). To re-enable, uncomment below. */}
+
+    {/*
+      TopNav scroll-hide.
+
+      The pill is fixed and we want it to slide up + fade out once the
+      user has scrolled past a small threshold, regardless of which
+      element is doing the scrolling:
+        - mobile: body min-h-svh, document/window scrolls
+        - desktop: body md:h-svh + md:overflow-hidden, slot wrapper scrolls
+
+      We attach a scroll listener to both window and the slot wrapper;
+      whichever fires drives the same body.is-scrolled toggle. CSS in
+      globals.css does the visual work.
+    */}
+    <script is:inline>
+      (function () {
+        var THRESHOLD = 32;
+        var slot = document.querySelector("body > div.flex.flex-1");
+        var body = document.body;
+
+        function onScroll() {
+          var y = (slot && slot.scrollTop) || window.scrollY || 0;
+          body.classList.toggle("is-scrolled", y > THRESHOLD);
+        }
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+        if (slot) slot.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+      })();
+    </script>
+
+    <script>
+      import { io } from "socket.io-client";
+
+      const isAuth = document.body.dataset.authenticated === "true";
+      if (isAuth) {
+        // Establish WebSocket connection directly to bypass ModSecurity polling blocks
+        const socket = io({ transports: ["websocket"] });
+        (window as any).globalSocket = socket;
+
+        socket.on("connect", () => {
+        });
+
+        socket.on("user:online", (data) => {
+          document.dispatchEvent(new CustomEvent("friends-updated"));
+        });
+
+        socket.on("user:offline", (data) => {
+          document.dispatchEvent(new CustomEvent("friends-updated"));
+        });
+
+        socket.on("game:start", (data: { gameId: number }) => {
+          if (window.location.pathname.startsWith("/chat")) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatUserParam = urlParams.get("user");
+            if (chatUserParam) {
+              const opponentId = parseInt(chatUserParam, 10);
+              if (!isNaN(opponentId)) {
+                fetch(`/api/games/${data.gameId}`)
+                  .then((res) => {
+                    if (res.ok) return res.json();
+                    throw new Error("Failed to fetch game details");
+                  })
+                  .then((resData) => {
+                    const game = resData?.game;
+                    if (game) {
+                      // Verify the opponent in this game is the exact user we are chatting with
+                      if (game.player1Id === opponentId || game.player2Id === opponentId) {
+                        window.location.href = `/play/m/${data.gameId}`;
+                      }
+                    }
+                  })
+                  // La navigation déclenchée ailleurs (ChatInterface) peut couper
+                  // ce fetch en plein vol : on avale l'annulation pour éviter le
+                  // "Uncaught (in promise) NetworkError" dans la console.
+                  .catch(() => {});
+              }
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

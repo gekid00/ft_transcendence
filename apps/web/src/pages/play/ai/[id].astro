@@ -1,0 +1,229 @@
+---
+/**
+ * /play/ai/[id] — vs-AI game page (authed).
+ *
+ * Reuses the gameplay composition from the landing page (Board +
+ * AITelemetry + EndGameOverlay) but swaps the marketing Leaderboard
+ * on the right for a gameplay-focused tool stack:
+ *   - AI opponent card (difficulty + your form last 5 + current streak)
+ *   - Game controls (New game, Resign)
+ *   - Visual chess-style PlayerTimer above the board
+ *
+ * Layout matches landing's 3-col grid so the board reads as the
+ * focal point with AITelemetry on the left and the right tool stack
+ * flanking it.
+ *
+ * Auth: gated behind isAuthenticated(). The :id parameter is the game ID
+ * returned by POST /api/games/ai.
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import { Board } from "~/components/landing/Board";
+import { EndGameOverlay } from "~/components/landing/EndGameOverlay";
+import { AITelemetry } from "~/components/landing/AITelemetry";
+import { PlayerTimer } from "~/components/landing/PlayerTimer";
+import { RightToolPanel } from "~/components/landing/RightToolPanel";
+import { buttonVariants } from "~/components/ui/button";
+import { isAuthenticated } from "~/lib/auth";
+import { cn } from "~/lib/utils";
+
+const { id: gameIdStr } = Astro.params;
+const gameId = parseInt(gameIdStr ?? "", 10);
+
+if (isNaN(gameId)) {
+  return Astro.redirect("/play");
+}
+
+if (!(await isAuthenticated(Astro))) {
+  return Astro.redirect("/signup?step=1");
+}
+const authed = true;
+
+// Fetch user profile and game information SSR-side
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:3000";
+const authToken = Astro.cookies.get("auth_token")?.value;
+let gridSkin = "liquid-glass"; // fallback default
+let pawnSkin = "default";
+let gameData: any = null;
+let userId: number | undefined = undefined;
+let aiStats: any = null;
+
+if (authToken) {
+  try {
+    // 1. Fetch Profile
+    const profileRes = await fetch(`${backendUrl}/api/profile`, {
+      headers: { Cookie: `auth_token=${authToken}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (profileRes.ok) {
+      const profile = await profileRes.json();
+      gridSkin = profile.gridSkin;
+      pawnSkin = profile.pawnSkin;
+      userId = profile.id;
+    }
+
+    // 2. Fetch Game Info
+    const gameRes = await fetch(`${backendUrl}/api/games/${gameId}`, {
+      headers: { Cookie: `auth_token=${authToken}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (gameRes.ok) {
+      gameData = await gameRes.json();
+    } else {
+      return Astro.redirect("/play");
+    }
+
+    // 3. Fetch User AI Stats for this difficulty
+    if (userId && gameData?.game?.aiDifficulty) {
+      const statsRes = await fetch(`${backendUrl}/api/users/${userId}/stats?is_ai=true&difficulty=${gameData.game.aiDifficulty}`, {
+        headers: { Cookie: `auth_token=${authToken}` },
+        signal: AbortSignal.timeout(1500),
+      });
+      if (statsRes.ok) {
+        aiStats = await statsRes.json();
+      }
+    }
+  } catch (e) {
+    // Fail silently on profile, but redirect on missing/broken game
+    if (!gameData) {
+      return Astro.redirect("/play");
+    }
+  }
+}
+
+const difficulty = gameData?.game?.aiDifficulty ?? "medium";
+const timePerPlayerSeconds = gameData?.game?.timePerPlayerSeconds ?? 180;
+const isAiOpponent = gameData?.game?.isAiOpponent ?? true;
+
+type Difficulty = "easy" | "medium" | "hard";
+type GameResult = "win" | "loss" | "draw";
+
+interface AiOpponentMock {
+  difficulty: Difficulty;
+  formLast5: GameResult[];               // oldest → newest
+  currentStreak: number;
+  longestStreak: number;
+  totalGames: number;
+}
+const aiOpponent: AiOpponentMock = {
+  difficulty: difficulty as Difficulty,
+  formLast5: aiStats?.form ? aiStats.form.slice(-5) : [],
+  currentStreak: aiStats?.streaks?.current ?? 0,
+  longestStreak: aiStats?.streaks?.longest ?? 0,
+  totalGames: aiStats?.totalGames ?? 0,
+};
+
+const getP1Colors = (skin: string) => {
+  switch (skin) {
+    case "sunset": return "bg-pawn-sunset-p1";
+    case "royal":  return "bg-pawn-royal-p1";
+    case "forest": return "bg-pawn-forest-p1";
+    default:       return "bg-pawn-yellow";
+  }
+};
+
+const getP2Colors = (skin: string) => {
+  switch (skin) {
+    case "sunset": return "bg-pawn-sunset-p2";
+    case "royal":  return "bg-pawn-royal-p2";
+    case "forest": return "bg-pawn-forest-p2";
+    default:       return "bg-pawn-red";
+  }
+};
+
+const resultDot: Record<GameResult, string> = {
+  win:  getP1Colors(pawnSkin),
+  loss: getP2Colors(pawnSkin),
+  draw: "bg-muted-foreground",
+};
+
+const cardCls = "rounded-xl border border-border bg-surface text-surface-foreground";
+---
+
+<RootLayout
+  title={`Game vs AI (${difficulty}) — 4thewin`}
+  description="Connect 4 vs AI"
+>
+  <main
+    id="main"
+    data-game-id={gameId}
+    data-difficulty={difficulty}
+    data-time-limit={timePerPlayerSeconds}
+    data-is-ai={isAiOpponent ? "true" : "false"}
+    class="relative mx-auto flex w-full max-w-7xl flex-col px-margin-mobile pt-28 pb-8 md:h-full md:overflow-hidden md:px-margin-desktop md:pt-28 md:pb-12"
+  >
+    {/* 3-col grid mirrors landing: AITelemetry / Board / right-stack.
+        items-center anchors all three columns around the board's
+        vertical centre. Mobile collapses to one column with the board
+        first (order-1), AITelemetry second, right stack last. */}
+    <div class="grid grid-cols-1 gap-16 md:flex-1 md:grid-cols-12 md:items-center md:gap-gutter">
+
+      {/* AITelemetry — desktop left, mobile after the board */}
+      <div
+        class="page-reveal order-2 flex justify-center md:order-1 md:col-span-3"
+        style="--reveal-delay: 0s"
+      >
+        <AITelemetry pawnSkin={pawnSkin} client:load />
+      </div>
+
+      {/* Board — center column. EndGameOverlay shares the same relative
+          wrapper so when the game ends the card overlays the board
+          exactly. */}
+      <div class="order-1 flex flex-col items-center gap-6 md:order-2 md:col-span-6 md:gap-6 relative">
+        <div class="md:absolute md:bottom-[calc(100%+1.5rem)] md:left-1/2 md:-translate-x-1/2 md:w-auto">
+          <PlayerTimer pawnSkin={pawnSkin} client:load />
+        </div>
+        <div
+          class="page-reveal relative"
+          style="--reveal-delay: 0.2s"
+        >
+          <Board
+            gameId={gameId}
+            userId={userId}
+            difficulty={difficulty as any}
+            timeLimit={timePerPlayerSeconds}
+            isAi={isAiOpponent}
+            variant={gridSkin as any}
+            pawnSkin={pawnSkin}
+            client:load
+          />
+          <EndGameOverlay authed={authed} client:load />
+        </div>
+      </div>
+
+      {/* Right column — gameplay tool stack. No card surfaces — matches
+          AITelemetry's no-bg, inline-content tone on the left so the
+          two side columns read as a balanced pair flanking the board.
+          Single mono typography family throughout (no display italic
+          on this side) for a tool-panel feel. */}
+      <div
+        class="page-reveal order-3 flex justify-center md:order-3 md:col-span-3 md:justify-start md:pl-gutter"
+        style="--reveal-delay: 0s"
+      >
+        <RightToolPanel
+          difficulty={difficulty}
+          isAi={true}
+          totalGames={aiOpponent.totalGames}
+          currentStreak={aiOpponent.currentStreak}
+          longestStreak={aiOpponent.longestStreak}
+          formLast5={aiOpponent.formLast5}
+          pawnSkin={pawnSkin}
+          client:load
+        />
+      </div>
+
+    </div>
+  </main>
+
+  {/* SVG filter for the liquid-glass board variant. Identical to the
+      one on landing — the variant references the filter via filter:url(#lg-dist)
+      so it has to be in the document. */}
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none;">
+    <defs>
+      <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="2" seed="92" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+        <feDisplacementMap in="SourceGraphic" in2="blurred" scale="70" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+</RootLayout>

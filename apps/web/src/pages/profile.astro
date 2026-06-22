@@ -1,0 +1,10 @@
+---
+import { getCurrentUser } from "~/lib/auth";
+
+const currentUser = await getCurrentUser(Astro);
+if (!currentUser) {
+  return Astro.redirect("/signup?step=1");
+}
+
+return Astro.redirect(`/profile/${currentUser.username}`);
+---

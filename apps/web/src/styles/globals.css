@@ -1,0 +1,1451 @@
+/* =============================================================================
+ * 4thewin — global stylesheet
+ *
+ * Layout:
+ *   1. Tailwind v4 import + font @import statements
+ *   2. @custom-variant dark — class-based dark mode
+ *   3. @theme — token contract (light defaults + scale + fonts)
+ *   4. .dark — dark mode overrides
+ *   5. @layer base — element defaults
+ *   6. Utilities for tokens Tailwind doesn't auto-generate (game pieces, etc.)
+ *
+ * The token contract is intentionally lean (~18 semantic tokens). shadcn-canonical
+ * names (--card, --popover, etc.) are aliased to --surface internally so primitives
+ * drop in without renaming.
+ * ============================================================================= */
+
+@import "tailwindcss";
+
+/* Variable fonts — self-hosted via @fontsource-variable */
+@import "@fontsource-variable/fraunces/full.css";
+@import "@fontsource-variable/fraunces/full-italic.css";
+@import "@fontsource-variable/public-sans/index.css";
+@import "@fontsource-variable/jetbrains-mono/index.css";
+
+/* Class-based dark mode: matches `.dark` on <html> or any ancestor */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
+ * @theme — design tokens (light mode defaults)
+ * Every --color-*, --font-*, --text-*, --spacing-*, --radius-* generates a
+ * matching Tailwind utility class.
+ * ============================================================================= */
+@theme {
+  /* --- Foundation surfaces --- */
+  --color-background: oklch(95.5% 0.012 85);   /* warm linen #f4f1ea */
+  --color-foreground: oklch(28% 0.03 250);     /* slate ink #1f2937 */
+  --color-surface: oklch(100% 0 0);            /* pure white, elevated */
+  --color-surface-foreground: oklch(28% 0.03 250);
+  --color-muted: oklch(91% 0.012 85);          /* darker linen #eae5db */
+  --color-muted-foreground: oklch(35% 0.04 25);/* warm taupe text */
+
+  /* --- Action / emphasis --- */
+  --color-primary: oklch(28% 0.03 250);        /* same as foreground (filled CTA) */
+  --color-primary-foreground: oklch(95.5% 0.012 85);
+  --color-secondary: oklch(0 0 0 / 0);         /* transparent (outlined CTA bg) */
+  --color-secondary-foreground: oklch(28% 0.03 250);
+  --color-accent: oklch(48% 0.20 25);          /* brand crimson #b7102a */
+  --color-accent-foreground: oklch(100% 0 0);
+  --color-destructive: oklch(50% 0.21 28);     /* error red #ba1a1a */
+  --color-destructive-foreground: oklch(100% 0 0);
+
+  /* --- Form / borders --- */
+  --color-border: oklch(53% 0.04 25);          /* warm taupe #8f6f6e */
+  --color-input: oklch(91% 0.012 85);          /* same as muted */
+  --color-ring: oklch(48% 0.20 25);            /* same as accent */
+
+  /* --- Game-specific --- */
+  --color-board: oklch(56% 0.02 80);           /* warm gray-tan plate #8b8478 */
+  --color-board-cell: oklch(85% 0.01 85);      /* light empty slot #d8d4cd */
+  --color-pawn-red: oklch(42% 0.19 25);        /* warm crimson — sister to brand accent (same hue 25), slightly darker so it doesn't compete with buttons */
+  --color-pawn-yellow: oklch(73% 0.16 72);     /* editorial amber gold — distinct hue from the linen bg (85) so it pops */
+
+  /* Optional pawn skin colors. */
+  --color-pawn-sunset-p1: oklch(65% 0.2 40);
+  --color-pawn-sunset-p2: oklch(60% 0.16 190);
+  --color-pawn-royal-p1: oklch(50% 0.2 280);
+  --color-pawn-royal-p2: oklch(72% 0.18 80);
+  --color-pawn-forest-p1: oklch(55% 0.18 150);
+  --color-pawn-forest-p2: oklch(65% 0.2 340);
+
+  /* Optional grid skin colors (background of the playing surface). */
+  --color-grid-linen: var(--color-background);  /* default — matches the page bg */
+  --color-grid-ink: oklch(28% 0.03 250);        /* same as light-mode foreground; gives a dark surface */
+  --color-grid-slate: oklch(48% 0.04 240);      /* mid-tone slate, neutral cool */
+
+  /* Stronger-than-foreground ink for "look at me" inline links and emphasis.
+     Used by the Sign-in / Sign-up cross-links between /login and /signup. */
+  --color-emphasis: oklch(15% 0.04 250);
+
+  /* --- shadcn aliases (so Dialog/Popover/Card primitives work without renaming) --- */
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-surface-foreground);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-surface-foreground);
+
+  /* --- Typography --- */
+  --font-display: "Fraunces Variable", ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+
+  /* Custom font sizes layered onto Tailwind's default scale.
+     Each --text-* token may carry --line-height, --letter-spacing, --font-weight sub-tokens. */
+
+  --text-display: 7.5rem;                     /* 120px desktop hero */
+  --text-display--line-height: 6.25rem;       /* 100px */
+  --text-display--letter-spacing: -0.04em;
+  --text-display--font-weight: 800;
+
+  --text-display-mobile: 4rem;                /* 64px mobile hero */
+  --text-display-mobile--line-height: 3.5rem;
+  --text-display-mobile--letter-spacing: -0.04em;
+  --text-display-mobile--font-weight: 800;
+
+  --text-metric: 1.5rem;                      /* 24px telemetry numbers */
+  --text-metric--line-height: 1.5rem;
+  --text-metric--letter-spacing: -0.01em;
+  --text-metric--font-weight: 600;
+
+  --text-mono-sm: 0.6875rem;                  /* 11px HUD micro-label */
+  --text-mono-sm--line-height: 1rem;
+  --text-mono-sm--letter-spacing: 0.1em;
+  --text-mono-sm--font-weight: 500;
+
+  --text-mono-md: 0.8125rem;                  /* 13px leaderboard rows */
+  --text-mono-md--line-height: 1.25rem;
+  --text-mono-md--letter-spacing: 0.05em;
+  --text-mono-md--font-weight: 500;
+
+  /* Semantic spacing on top of Tailwind's default scale (0..96).
+     Use as gap-gutter, p-margin-mobile, px-margin-desktop, etc. */
+  --spacing-gutter: 1.5rem;                   /* 24px between columns */
+  --spacing-margin-mobile: 1.25rem;           /* 20px page padding small viewports */
+  --spacing-margin-desktop: 4rem;             /* 64px page padding desktop */
+
+  /* Responsive breakpoints.
+
+     The `md:` breakpoint controls the page-level layout switch (mobile
+     stack -> desktop grid). It's been bumped from Tailwind's default
+     768px to 1024px because the landing page's 12-col grid + 6-col board
+     + margin-desktop (64px each side) needs ~960px before the board
+     stops squashing. 1024px is the clean round number above that
+     threshold.
+
+     `xs:` is a new, narrower breakpoint reserved for compact chrome —
+     the TopNav pill and SiteFooter — that comfortably fits at much
+     smaller viewports than the body layout. The pill's content
+     (brand SVG + theme toggle + Login + Sign up + paddings) totals
+     ~440px, so 480px gives breathing room.
+
+     Net effect: at viewports 480..1023 the body is in mobile layout but
+     the TopNav and footer are already in their desktop sizing. */
+  --breakpoint-xs: 480px;
+  --breakpoint-md: 1024px;
+
+  /* Signup progress tracker — Connect-4-themed token drop + step-4 win sequence.
+
+     Per-step: the token at the current step plays signup-token-drop on mount.
+     Single translate + opacity, smooth ease-out — feels like a token settling
+     into its slot with air resistance, no cartoon squish or bounce.
+
+     Step 4 only: after the final token drops, a connecting line draws across
+     all four tokens (left → right), then all four tokens emit a glow flash —
+     the connect-4 payoff moment. CSS sequences this purely via
+     animation-delay on elements within [data-current="4"]. */
+  --animate-signup-token-drop: signup-token-drop 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+  @keyframes signup-token-drop {
+    0% {
+      transform: translateY(-22px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes signup-line-draw {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  @keyframes signup-token-flash {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.25); }
+  }
+
+  /* Radius scale */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* AI telemetry matrix — two layered animations:
+     1. matrix-pulse: column-staggered wave. Scale-only. Cells live at
+        the trough state (scale 0.92) at rest AND at keyframe 0%, so when
+        the animation kicks in there's no visible jump on reload. They
+        pulse UP to peak at 50% (scale 1.04) — visible growth.
+        Opacity is INTENTIONALLY not animated here: it's controlled
+        directly by the --matrix-base-opacity variable on each cell, so
+        when the AI evaluation updates the cell can smoothly transition
+        opacity over time without the pulse animation fighting the
+        transition.
+     2. sonar-ping: best-move cell radiates a soft ring every 5s.
+     The matrix's per-cell opacity is driven by `--matrix-base-opacity`,
+     which is set inline based on the AI's score for that cell's column.
+     Registered as a CSS @property below so the variable can interpolate
+     when the AI evaluation changes — the cell's brightness smoothly
+     transitions to the new value over 1200ms while the pulse animation
+     continues uninterrupted (since the pulse no longer touches opacity).
+     Firefox / Safari without @property support fall back to instant
+     updates (acceptable degradation). */
+  --animate-matrix-pulse: matrix-pulse 3s ease-in-out infinite;
+  --animate-sonar-ping: sonar-ping 5s ease-out infinite;
+
+  @keyframes matrix-pulse {
+    0%, 100% {
+      transform: scale(0.92);
+    }
+    50% {
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes sonar-ping {
+    0% {
+      box-shadow: 0 0 0 0 currentColor;
+    }
+    18% {
+      box-shadow: 0 0 0 12px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+}
+
+/* =============================================================================
+ * .dark — overrides (only the tokens that change between modes)
+ * No new utilities are generated here; we override the CSS vars that the
+ * @theme classes already reference.
+ * ============================================================================= */
+.dark {
+  --color-background: oklch(15% 0 0);          /* deep ink #121212 */
+  --color-foreground: oklch(96% 0 0);          /* near-white #f5f5f5 */
+  --color-surface: oklch(20% 0 0);             /* elevated panel #1e1e1e */
+  --color-surface-foreground: oklch(96% 0 0);
+  --color-muted: oklch(24% 0 0);               /* slight elevation #262626 */
+  --color-muted-foreground: oklch(70% 0.01 250); /* cool gray #9ca3af */
+
+  --color-primary: oklch(96% 0 0);             /* inverted (light filled CTA) */
+  --color-primary-foreground: oklch(15% 0 0);
+  --color-secondary: oklch(0 0 0 / 0);
+  --color-secondary-foreground: oklch(96% 0 0);
+  --color-accent: oklch(63% 0.21 25);          /* glowing red #ef4444 */
+  --color-accent-foreground: oklch(12% 0 0);
+  --color-destructive: oklch(56% 0.22 28);
+  --color-destructive-foreground: oklch(96% 0 0);
+
+  --color-border: oklch(100% 0 0 / 0.15);      /* white @ 15% alpha */
+  --color-input: oklch(24% 0 0);
+  --color-ring: oklch(63% 0.21 25);
+
+  --color-board: oklch(28% 0 0);               /* dark plate #2a2a2a */
+  --color-board-cell: oklch(18% 0 0);          /* very dark slot #1a1a1a */
+  --color-pawn-red: oklch(63% 0.21 25);        /* glowing — collapses with accent in dark */
+  --color-pawn-yellow: oklch(76% 0.16 85);     /* honey #eab308 */
+
+  /* Pawn skin colors. */
+  --color-pawn-sunset-p1: oklch(70% 0.2 40);
+  --color-pawn-sunset-p2: oklch(68% 0.16 190);
+  --color-pawn-royal-p1: oklch(60% 0.2 280);
+  --color-pawn-royal-p2: oklch(78% 0.18 80);
+  --color-pawn-forest-p1: oklch(62% 0.18 150);
+  --color-pawn-forest-p2: oklch(72% 0.2 340);
+
+  /* Grid skin colors. Linen tracks the surface, ink goes deeper, slate stays
+     a cool mid-tone. */
+  --color-grid-linen: var(--color-surface);
+  --color-grid-ink: oklch(12% 0 0);
+  --color-grid-slate: oklch(40% 0.04 240);
+
+  /* In dark mode the foreground is already near-white — emphasis collapses
+     to the same value (you can't go "darker than white" without color shift). */
+  --color-emphasis: var(--color-foreground);
+}
+
+/* =============================================================================
+   Pawn skin brand color accent overrides (site-wide accent harmonization)
+   ============================================================================= */
+html[data-pawn-skin="sunset"] {
+  --color-accent: var(--color-pawn-sunset-p1);
+  --color-ring: var(--color-pawn-sunset-p1);
+  --color-pawn-red: var(--color-pawn-sunset-p2);
+  --color-pawn-yellow: var(--color-pawn-sunset-p1);
+  --color-pawn-red-winning-glow: oklch(60% 0.16 190 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(65% 0.2 40 / 0.55);
+}
+.dark html[data-pawn-skin="sunset"] {
+  --color-pawn-red-glow: oklch(68% 0.16 190 / 0.4);
+  --color-pawn-yellow-glow: oklch(70% 0.2 40 / 0.4);
+  --color-pawn-red-winning-glow: oklch(68% 0.16 190 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(70% 0.2 40 / 0.55);
+}
+
+html[data-pawn-skin="royal"] {
+  --color-accent: var(--color-pawn-royal-p1);
+  --color-ring: var(--color-pawn-royal-p1);
+  --color-pawn-red: var(--color-pawn-royal-p2);
+  --color-pawn-yellow: var(--color-pawn-royal-p1);
+  --color-pawn-red-winning-glow: oklch(72% 0.18 80 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(50% 0.2 280 / 0.55);
+}
+.dark html[data-pawn-skin="royal"] {
+  --color-pawn-red-glow: oklch(78% 0.18 80 / 0.4);
+  --color-pawn-yellow-glow: oklch(60% 0.2 280 / 0.4);
+  --color-pawn-red-winning-glow: oklch(78% 0.18 80 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(60% 0.2 280 / 0.55);
+}
+
+html[data-pawn-skin="forest"] {
+  --color-accent: var(--color-pawn-forest-p1);
+  --color-ring: var(--color-pawn-forest-p1);
+  --color-pawn-red: var(--color-pawn-forest-p2);
+  --color-pawn-yellow: var(--color-pawn-forest-p1);
+  --color-pawn-red-winning-glow: oklch(65% 0.2 340 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(55% 0.18 150 / 0.55);
+}
+.dark html[data-pawn-skin="forest"] {
+  --color-pawn-red-glow: oklch(72% 0.2 340 / 0.4);
+  --color-pawn-yellow-glow: oklch(62% 0.18 150 / 0.4);
+  --color-pawn-red-winning-glow: oklch(72% 0.2 340 / 0.55);
+  --color-pawn-yellow-winning-glow: oklch(62% 0.18 150 / 0.55);
+}
+
+/* =============================================================================
+ * @layer base — element defaults applied through tokens
+ * ============================================================================= */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  html {
+    /* Smoother color-scheme reporting to the UA (scrollbars, form controls) */
+    color-scheme: light;
+  }
+  .dark html,
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Theme-toggle anti-flash.
+
+     The theme toggle in RootLayout adds .disable-transitions to <html>
+     immediately before flipping the .dark class, then removes it on the
+     next animation frame. While the class is present, *all* CSS
+     transitions in the document are cancelled — that prevents the
+     "shimmer" where hundreds of elements with transition-colors each
+     fade to their new tokenised colour over 150-300ms while body bg /
+     pawn box-shadows / native scrollbars snap instantly. Result: the
+     whole page changes mode in one frame (matches GitHub / Linear /
+     Slack / etc.).
+
+     Only `transition` is killed — `animation` is untouched, so the
+     page-reveal keyframes and other intentional motion still run. */
+  html.disable-transitions,
+  html.disable-transitions *,
+  html.disable-transitions *::before,
+  html.disable-transitions *::after {
+    transition: none !important;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tabular numerals everywhere mono is used — keeps leaderboard & telemetry aligned */
+  .font-mono,
+  [class*="font-mono"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Default focus ring uses --ring; only visible on keyboard nav */
+  :where(button, [role="button"], a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* =============================================================================
+ * Utilities — game-piece visuals that need box-shadow glows in dark mode.
+ * Tailwind v4 auto-generates bg-pawn-red / bg-pawn-yellow from the @theme
+ * tokens; these utilities layer the dark-mode glow on top.
+ * ============================================================================= */
+@utility pawn-red {
+  background-color: var(--color-pawn-red);
+  /* Light mode: subtle 3D dome (inset shading) + tiny lift (drop shadow).
+     Mirrors dark mode's bottom inset, swaps the glow for a quiet drop so
+     pieces read as physical tokens resting on linen, not decals. */
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-red {
+  box-shadow:
+    0 0 12px var(--color-pawn-red-glow, oklch(63% 0.21 25 / 0.4)),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-yellow {
+  background-color: var(--color-pawn-yellow);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-yellow {
+  box-shadow:
+    0 0 12px var(--color-pawn-yellow-glow, oklch(76% 0.16 85 / 0.4)),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+/* Neutral token + slot — used by the signup progress tracker. Same depth
+   recipe as pawn-red / pawn-yellow but with the foreground/muted palette so
+   the tracker reads as Connect-4 board pieces without the brand-color tax. */
+@utility pawn-neutral {
+  background-color: var(--color-foreground);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.20),
+    inset 0 1px 1px oklch(100% 0 0 / 0.22),
+    0 1px 2px oklch(0% 0 0 / 0.18);
+}
+.dark .pawn-neutral {
+  /* Flat in dark mode — light foreground on dark background reads clearly
+     without glow or inset. Matches the visual stillness the user expects
+     from the light-mode rendering. */
+  box-shadow: none;
+}
+
+@utility pawn-slot {
+  /* Empty Connect-4 slot — inverted insets so it looks like a hole in the
+     board: top-dark (rim shadow) + bottom-light (floor catching light). */
+  background-color: var(--color-muted);
+  box-shadow:
+    inset 0 2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.20);
+}
+.dark .pawn-slot {
+  /* In dark mode the muted bg is darker than the page — slot reads as a
+     deeper hollow. Dial up the rim shadow, drop most of the floor highlight. */
+  box-shadow:
+    inset 0 2px 4px oklch(0% 0 0 / 0.45),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.06);
+}
+
+/* =============================================================================
+ * EXPERIMENT — Board variants for A/B evaluation
+ *
+ * Five distinct visual treatments of the Connect-4 board, applied via a
+ * variant prop on <Board /> + URL ?board=X param. Temporary — once a
+ * direction is picked these can be deleted (or one promoted to default).
+ *
+ *   branded   — saturated brand-wine plate, cells are page-bg holes
+ *   glass     — frosted-glass translucent, backdrop-blur, soft border
+ *   wood      — warm walnut plate with subtle linear grain texture
+ *   none      — no plate at all, cells are outlined rings, pieces float
+ *   recessed  — current plate with thicker rim + deeper cell insets
+ *
+ * Each variant has both a plate utility (board-X) and a cell utility
+ * (board-X-cell). Light + dark mode handled per utility.
+ * ============================================================================= */
+
+/* --- branded: deep wine plate -------------------------------------------- */
+@utility board-branded {
+  background-color: oklch(32% 0.10 25);
+}
+.dark .board-branded {
+  background-color: oklch(22% 0.07 25);
+}
+@utility board-branded-cell {
+  background-color: var(--color-background);
+  box-shadow:
+    inset 0 2px 3px oklch(0% 0 0 / 0.3),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.15);
+}
+
+/* --- glass: frosted translucent ------------------------------------------ */
+@utility board-glass {
+  /* Frosted-white tint, heavy blur, inset top highlight + bottom shadow
+     so the plate reads as actual glass with thickness — not just a tinted
+     rectangle. saturate(1.3) makes whatever bg shows through pop slightly. */
+  background-color: oklch(95% 0.005 250 / 0.32);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid oklch(100% 0 0 / 0.4);
+  box-shadow:
+    inset 0 1px 1px oklch(100% 0 0 / 0.5),
+    inset 0 -1px 1px oklch(0% 0 0 / 0.1);
+}
+.dark .board-glass {
+  background-color: oklch(45% 0.02 250 / 0.45);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  border-color: oklch(100% 0 0 / 0.18);
+  box-shadow:
+    inset 0 1px 1px oklch(100% 0 0 / 0.18),
+    inset 0 -1px 1px oklch(0% 0 0 / 0.3);
+}
+@utility board-glass-cell {
+  /* Cells are transparent windows — page bg shows through the plate's
+     blur-filtered view. Strong inset shadows give them depth so they
+     read as wells pressed into the glass, not flat circles. */
+  background-color: oklch(0% 0 0 / 0);
+  box-shadow:
+    inset 0 2px 4px oklch(0% 0 0 / 0.18),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.25);
+}
+.dark .board-glass-cell {
+  box-shadow:
+    inset 0 2px 5px oklch(0% 0 0 / 0.55),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.05);
+}
+
+/* --- wood: walnut plate with subtle grain -------------------------------- */
+@utility board-wood {
+  background-color: oklch(38% 0.06 55);
+  /* Layer 1: very subtle horizontal lighten/darken sweep for depth.
+     Layer 2: very fine vertical grain lines (1px every ~6px). */
+  background-image:
+    linear-gradient(180deg,
+      oklch(100% 0 0 / 0.04) 0%,
+      transparent 30%,
+      oklch(0% 0 0 / 0.06) 100%
+    ),
+    repeating-linear-gradient(90deg,
+      transparent 0,
+      transparent 5px,
+      oklch(0% 0 0 / 0.04) 5px,
+      oklch(0% 0 0 / 0.04) 6px
+    );
+}
+.dark .board-wood {
+  background-color: oklch(25% 0.04 55);
+}
+@utility board-wood-cell {
+  background-color: oklch(28% 0.04 55);
+  box-shadow:
+    inset 0 2px 4px oklch(0% 0 0 / 0.5),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.04);
+}
+.dark .board-wood-cell {
+  background-color: oklch(15% 0.02 55);
+}
+
+/* --- none: no plate, just cells as recessed wells ------------------------ */
+@utility board-none {
+  background-color: transparent;
+  box-shadow: none;
+}
+@utility board-none-cell {
+  /* Each cell is a well carved into the page surface itself. The visual
+     trick to "carved-in" (not "popping out"):
+       1. Solid darker-than-page bg (so the whole cell reads as a recess)
+       2. Multi-layer inset TOP shadow — the dominant cue. Stacks a sharp
+          rim shadow on top of a soft deep-well shadow. Both eye and brain
+          read 'this area is in shadow at the top → light-blocked → depressed'
+       3. Minimal bottom highlight (~15-20% white). Too bright reads as a
+          rounded button bottom; too dim and the well looks flat-bottomed.
+     The gradient bg from the previous version was DROPPED — radial light-
+     center / dark-edges is the same shading pattern a dome has, so it was
+     fighting the inset shadows for "is this raised or recessed?" */
+  background-color: oklch(0% 0 0 / 0.08);
+  box-shadow:
+    /* Sharp top rim shadow — the carved edge */
+    inset 0 2px 2px oklch(0% 0 0 / 0.40),
+    /* Deep well shadow — the well's interior darkness */
+    inset 0 6px 12px -1px oklch(0% 0 0 / 0.32),
+    /* Subtle floor highlight — very dim, only suggests rim curvature */
+    inset 0 -1px 1px oklch(100% 0 0 / 0.25);
+}
+.dark .board-none-cell {
+  /* Tuning history:
+       v1: bg 0.45 → too dark, wells looked like voids
+       v2: bg 0.18 → still too dark
+       v3: bg 0.10 → cells lost visibility against dark page bg
+       v4: bg 0.14 + 0.5px/0.05 rim → still not visible enough
+       v5: bg 0.18 + 1px/0.12 rim → wells visible via clear edges,
+           interior stays in the carved-not-void band
+     Two levers used together: a slight bg bump AND a more
+     pronounced outer rim highlight. Boundary definition does most
+     of the visibility work; the rim is what makes the grid
+     structure read clearly against the dark page. */
+  background-color: oklch(0% 0 0 / 0.18);
+  box-shadow:
+    /* Outer rim highlight — defines each well's boundary as a
+       thin bright outline against the dark page surface. The grid
+       reads as a structure of cells, not a uniform dark area. */
+    0 0 0 1px oklch(100% 0 0 / 0.12),
+    inset 0 2px 2px oklch(0% 0 0 / 0.50),
+    inset 0 6px 12px -1px oklch(0% 0 0 / 0.32),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.05);
+}
+
+/* --- recessed: current plate dialed up ----------------------------------- */
+@utility board-recessed {
+  background-color: var(--color-board);
+  border: 3px solid oklch(0% 0 0 / 0.25);
+}
+.dark .board-recessed {
+  border-color: oklch(0% 0 0 / 0.5);
+}
+@utility board-recessed-cell {
+  background-color: var(--color-board-cell);
+  box-shadow:
+    inset 0 3px 5px oklch(0% 0 0 / 0.45),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.25);
+}
+.dark .board-recessed-cell {
+  box-shadow:
+    inset 0 3px 6px oklch(0% 0 0 / 0.7),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.04);
+}
+
+/* --- raised: board pops out of the page with no hard edge --------------- *
+ * Neumorphism / soft-UI raised effect (the standard technique). Two
+ * opposing outer box-shadows create the impression the element is
+ * extruded from the page surface:
+ *   - Light shadow (negative offset, lighter-than-bg color) — the
+ *     upper-left edge of the rise, lit by the implied light source
+ *   - Dark shadow (positive offset, darker-than-bg color) — the
+ *     lower-right edge of the rise, in cast shadow
+ * The element bg matches the page bg so it reads as a continuous surface
+ * that's been pushed up; no separate plate color, no hard boundary.
+ * Shadow colors are PICKED FROM the surface — slightly lighter and
+ * slightly darker variants of var(--color-background) — which is what
+ * makes the slope feel soft instead of harshly outlined. */
+@utility board-raised {
+  background: var(--color-background);
+  /* Five-layer shadow stack for realistic raised dome:
+       1. Outer light (upper-left) — bright halo where light wraps around
+          the lit edge of the rise
+       2. Outer dark (lower-right) — cast shadow where the rise blocks
+          light from reaching the page surface
+       3. Inset light (upper-left) — surface itself catches light on the
+          upper-left side of the dome (curvature shading)
+       4. Inset dark (lower-right) — surface curves into shadow on the
+          lower-right side (curvature shading)
+       5. Crest highlight (top edge) — thin bright line where light hits
+          the very top of the rise (specular)
+     All five layers agree on a single upper-left light source, which is
+     what makes the dome read consistently as a single 3D shape. */
+  box-shadow:
+    -18px -18px 40px oklch(99% 0.005 85),
+    18px 18px 40px oklch(82% 0.025 75),
+    inset 8px 8px 18px oklch(100% 0 0 / 0.35),
+    inset -8px -8px 18px oklch(0% 0 0 / 0.04),
+    inset 0 1.5px 0 oklch(100% 0 0 / 0.5);
+}
+.dark .board-raised {
+  background: var(--color-background);
+  box-shadow:
+    -18px -18px 40px oklch(22% 0 0),
+    18px 18px 40px oklch(6% 0 0),
+    inset 8px 8px 18px oklch(100% 0 0 / 0.06),
+    inset -8px -8px 18px oklch(0% 0 0 / 0.3),
+    inset 0 1.5px 0 oklch(100% 0 0 / 0.10);
+}
+
+/* --- liquid-glass: Apple-style 4-layer structure ------------------------- *
+ * Adapted from cssscript.com/liquid-glass-ui (CC-MIT).
+ * Real liquid-glass requires four stacked layers:
+ *   .lg-filter   — backdrop-blur + SVG displacement filter (refraction)
+ *   .lg-overlay  — translucent color tint
+ *   .lg-specular — inset rim highlights (surface sheen)
+ *   .lg-content  — actual content on top of all the layers
+ * The SVG filter (#lg-dist) is defined once on the page; here we just
+ * reference it. Specular box-shadows do most of the "glass" work in
+ * browsers that don't support backdrop-filter + SVG filter (Safari, FF). */
+@utility lg-filter {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Stronger blur (4px) + saturate(1.5) so the under-glass color circles
+     placed at z-0 BEFORE this layer in DOM smear visibly into the plate.
+     This is what produces the "glass picks up piece color" effect. */
+  backdrop-filter: blur(4px) saturate(1.5);
+  -webkit-backdrop-filter: blur(4px) saturate(1.5);
+  filter: url(#lg-dist);
+  isolation: isolate;
+  pointer-events: none;
+}
+@utility lg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: oklch(100% 0 0 / 0.20);
+  pointer-events: none;
+}
+.dark .lg-overlay {
+  /* User-tuned: dark mode glass should feel a bit lighter than 0.02
+     (which was barely any tint and made the glass feel too dark/heavy).
+     0.07 keeps the under-glass piece colors visibly bleeding through
+     while giving the plate a clearer "frosted glass" presence in dark
+     mode. Adjust this single value for darker/lighter glass without
+     touching the rest of the lg stack. */
+  background: oklch(100% 0 0 / 0.07);
+}
+@utility lg-specular {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  /* Multi-layer inset shadows: bright top-left rim (light source upper-left),
+     soft inner glow, faint inner shadow at bottom-right for the "back" of
+     the glass. This is what gives the layer its glass-surface sheen. */
+  box-shadow:
+    inset 1px 1px 0 oklch(100% 0 0 / 0.5),
+    inset -1px -1px 0 oklch(100% 0 0 / 0.15),
+    inset 0 0 12px oklch(100% 0 0 / 0.25);
+}
+.dark .lg-specular {
+  /* Dark mode: nearly nothing. Only a very faint top-edge highlight where
+     light hits the upper rim of the glass. Side rims are dropped entirely
+     because they were registering as a uniform bright border around the
+     plate against the dark page bg. */
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.12);
+}
+
+/* Pawn glow amplification — only when pieces are inside a liquid-glass plate.
+   The .lg-content scope keeps this isolated from other variants and other
+   uses of the pawn utilities. The bigger glow + warmer alpha in dark mode
+   makes piece-color diffusion through the glass dramatically more visible. */
+.dark .lg-content .pawn-red {
+  box-shadow:
+    0 0 28px oklch(63% 0.21 25 / 0.7),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+.dark .lg-content .pawn-yellow {
+  box-shadow:
+    0 0 28px oklch(76% 0.16 85 / 0.7),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+@utility lg-content {
+  position: relative;
+  z-index: 3;
+}
+
+/* Cells inside the liquid-glass plate. Transparent fills so the page bg
+   refracts through; subtle inset shadows for "well in glass" depth.
+   The first shadow is an INVISIBLE placeholder rim (0 spread, 0 alpha) —
+   it pairs with the rim shadow in board-liquid-glass-cell-hover so CSS
+   can interpolate the same shadow count when transitioning idle ↔ hover.
+   Without it, the 3rd shadow appearing/disappearing snaps abruptly. */
+@utility board-liquid-glass-cell {
+  background-color: oklch(0% 0 0 / 0.08);
+  box-shadow:
+    inset 0 0 0 0 oklch(100% 0 0 / 0),
+    inset 0 2px 3px oklch(0% 0 0 / 0.25),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.4);
+}
+.dark .board-liquid-glass-cell {
+  background-color: oklch(0% 0 0 / 0.20);
+  box-shadow:
+    inset 0 0 0 0 oklch(100% 0 0 / 0),
+    inset 0 2px 4px oklch(0% 0 0 / 0.5),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.1);
+}
+
+/* Column-hover highlight. Applied to all empty cells in the column the
+   user is hovering. A bright inset rim + slightly stronger shading reads
+   as "this column is targeted for the next drop". */
+@utility board-liquid-glass-cell-hover {
+  background-color: oklch(0% 0 0 / 0.14);
+  box-shadow:
+    inset 0 0 0 1.5px oklch(100% 0 0 / 0.55),
+    inset 0 2px 3px oklch(0% 0 0 / 0.20),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.55);
+}
+.dark .board-liquid-glass-cell-hover {
+  background-color: oklch(0% 0 0 / 0.30);
+  box-shadow:
+    inset 0 0 0 1.5px oklch(100% 0 0 / 0.30),
+    inset 0 2px 4px oklch(0% 0 0 / 0.55),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.18);
+}
+
+/* =============================================================================
+ * Signup progress tracker — step-4 win sequence
+ *
+ * The progress component sets data-current="N" on its wrapper. At N=4, after
+ * the final token has dropped in, the connecting line draws and the four
+ * tokens emit a synchronized glow flash. Pure CSS — sequenced via
+ * animation-delay on the line and the token-flash class.
+ * ============================================================================= */
+[data-signup-line] {
+  /* Hidden by default; only animates when parent[data-current="4"] is set. */
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+[data-current="4"] [data-signup-line] {
+  animation: signup-line-draw 560ms ease-out 380ms forwards;
+}
+[data-current="4"] [data-signup-token][data-filled="true"] {
+  animation: signup-token-flash 700ms ease-in-out 980ms;
+}
+
+/* =============================================================================
+ * DEV: 8-column grid overlay — toggleable, available on every page
+ *
+ * Shows the page's 8-column grid as a translucent overlay so we can verify
+ * alignment without measuring DOM. Hidden by default. The #grid-toggle
+ * button (RootLayout) adds/removes the .grid-on class on <html> and
+ * persists state in localStorage.
+ * ============================================================================= */
+.grid-overlay {
+  display: none;
+}
+html.grid-on .grid-overlay {
+  display: block;
+}
+
+/* =============================================================================
+ * Landing page intro animation
+ *
+ * Sequence:
+ *   t=0          page loads, only TopNav visible
+ *   0 → 1.8s    hero ("Connect 4, but smarter.") draws in via clip-path
+ *               sweep with a soft blur on the leading edge that clears as
+ *               the text settles ("ink wet" feel)
+ *   1.8 → 2.3s  brief hold — hero is fully drawn, settled
+ *   2.3 → 3.1s  hero exits (blur + Y-translate, opacity 1 → 0)
+ *   2.5 → 3.5s  state label ("YOUR TURN") fades in
+ *   2.7 → 3.7s  board fades in (slight stagger after state label)
+ *   2.9 → 3.9s  side panels (telemetry + leaderboard) fade in
+ *
+ * Each entrance overlaps the previous, so the page assembles itself in
+ * one continuous motion rather than discrete steps.
+ *
+ * Reduced-motion users skip the entire intro — final state shows on first
+ * paint with no animation.
+ * ============================================================================= */
+
+/* Phase 1+3: word-by-word mask reveal of the hero, then exit it as a whole.
+   Each word wears .hero-word (overflow:hidden mask) wrapping a .hero-word-
+   inner whose initial transform pushes it 100% below the visible area.
+   The inner animates upward into view, fading in and clearing a soft blur
+   as it settles — the word emerges from "below the line" as if being
+   typeset. Stagger via --i. The wrapper h1 wears .hero-letters and runs
+   only the exit phase (after all words have arrived). */
+@keyframes hero-word-reveal {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+    filter: blur(8px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes hero-exit {
+  0%   { opacity: 1; filter: blur(0);    transform: translateY(0);    }
+  100% { opacity: 0; filter: blur(10px); transform: translateY(-14px); }
+}
+.hero-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Extend the mask box 0.3em BELOW the visible text via padding-bottom.
+     The gradient fade is confined to that padding zone, NOT to the text.
+     At rest the visible text sits entirely in the opaque region of the
+     mask — no gradient on the settled word. During the reveal, as the
+     inner translates up from below, its leading bottom edge passes
+     through the gradient zone and fades in softly (no hard cut line).
+     Negative margin-bottom keeps external layout flush.
+
+     padding-right + negative margin-right: italic glyphs (especially
+     'r' with its rightward stroke) can extend past the measured text
+     width. Without this bleed room they'd be clipped by overflow:hidden.
+     Layout is unaffected (margin compensates). */
+  padding-bottom: 0.3em;
+  margin-bottom: -0.3em;
+  padding-right: 0.08em;
+  margin-right: -0.08em;
+  line-height: 1;
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 0.3em, black 100%);
+          mask-image: linear-gradient(to top, transparent 0%, black 0.3em, black 100%);
+}
+.hero-word-inner {
+  display: inline-block;
+  transform: translateY(100%);
+  opacity: 0;
+  filter: blur(8px);
+  animation: hero-word-reveal 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 150ms);
+}
+.hero-letters {
+  pointer-events: none;
+  animation: hero-exit 0.8s cubic-bezier(0.4, 0, 0.2, 1) 2.3s forwards;
+  /* will-change OMITTED — same reasoning as page-reveal. The hero
+     element is at z-10 over the board area; layer demotion when the
+     hero-exit animation completes was a candidate for the dark-mode
+     board flicker. */
+}
+
+/* Page-reveal: subtle fade-up for state label, board, side panels.
+/* Page-reveal: fade-up for state label, board, side panels.
+   Each element gets its own delay via inline style --reveal-delay.
+
+   Anti-flicker for dark mode (where the board's pawn pieces have outer
+   glow box-shadows and the backdrop-filter is more prominent):
+     - opacity range is 0.001 → 0.999, NEVER hits exactly 0 or 1.
+       Any opacity strictly between 0 and 1 keeps the element in its
+       own stacking context. If opacity touches 0 or 1, the browser
+       collapses the context, re-evaluating backdrop-filter against a
+       different backdrop → visible color flicker on the board.
+     - animation-fill-mode: both applies the 0% keyframe BEFORE the
+       animation starts (during the delay window), so the element is
+       already at opacity 0.001 + translateY(20px) waiting in its
+       stacking context.
+     - isolation: isolate explicitly forces the stacking context too,
+       belt-and-suspenders for browser differences. */
+@keyframes page-reveal {
+  0%   { opacity: 0.001; transform: translateY(20px); }
+  100% { opacity: 0.999; transform: translateY(0);    }
+}
+.page-reveal {
+  opacity: 0.001;
+  isolation: isolate;
+  animation: page-reveal 1s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: var(--reveal-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-word-inner, .hero-letters, .page-reveal {
+    animation: none;
+  }
+  .hero-word-inner {
+    /* Words appear in their final position immediately, no slide */
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
+  .hero-letters {
+    /* Hero is hidden in reduced-motion — final state has it gone */
+    opacity: 0;
+  }
+  .page-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero-seen — user has already watched the intro on a previous visit.
+   Class is added to <html> by the inline bootstrap script in index.astro
+   when localStorage["hero-seen"] === "true". Skips the entire intro and
+   shows the final state (hero gone, components visible) immediately. */
+html.hero-seen .hero-letters {
+  display: none;
+}
+html.hero-seen .hero-word-inner {
+  animation: none;
+  transform: none;
+  opacity: 1;
+  filter: none;
+}
+html.hero-seen .page-reveal {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+
+/* Piece-drop — gravity-style fall for newly-placed Connect 4 pieces.
+   Used by the under-glass color blobs (liquid-glass variant) and by the
+   sharp on-top pieces (non-liquid-glass variants). Each filled cell carries
+   an inline `--drop-start` CSS variable scaled to the piece's landing row
+   so a piece landing at row 0 starts ~1 cell above its cell, and a piece
+   landing at row 5 starts ~6 cells above — visually all pieces appear to
+   fall from above the board area, with longer falls naturally accelerating
+   more under the cubic-bezier easing. The board plate clips the visible
+   region with overflow:hidden, so the falling piece looks like it slides
+   into the board from the top.
+
+   Per-keyframe animation-timing-function lets each segment have its own ease:
+     0%  → 85%: gravity-style fall (slow start, fast end)
+     85% → 92%: small overshoot (3px above resting position)
+     92% → 100%: settle back down
+*/
+@keyframes piece-drop {
+  0% {
+    transform: translateY(var(--drop-start, -300%));
+    animation-timing-function: cubic-bezier(0.6, 0.04, 0.7, 0.4);
+  }
+  85% {
+    transform: translateY(0);
+    animation-timing-function: ease-out;
+  }
+  92% {
+    transform: translateY(-3px);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.piece-drop {
+  animation: piece-drop 0.45s forwards;
+}
+
+/* Piece-fade-in — used for the on-top sharp piece in the liquid-glass
+   variant. While the piece is falling we want to see only the soft
+   refracted tint (under-glass blob, animated with .piece-drop) — the
+   sharp circle materializes at the landing instant, like the piece
+   has just settled into the cell cutout.
+   Stays invisible for the first 80% of the duration, fades in over
+   the last 20%. Matches piece-drop's 0.45s duration so timing aligns. */
+@keyframes piece-fade-in {
+  0%, 80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.piece-fade-in {
+  animation: piece-fade-in 0.45s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece-drop,
+  .piece-fade-in {
+    animation: none;
+  }
+}
+
+
+/* @property registration for --matrix-base-opacity. Without this, CSS
+   custom properties are typed as `<unrecognised>` and CSS can't
+   interpolate them — assignments are instant. Registering with
+   `<number>` syntax makes the variable animatable so transitions and
+   smooth state changes work when the AI evaluation updates.
+   Browser support: Chromium-based browsers (good), Firefox 128+,
+   Safari 16.4+. Older browsers fall back to instant changes. */
+@property --matrix-base-opacity {
+  syntax: '<number>';
+  initial-value: 0.35;
+  inherits: false;
+}
+
+/* Smooth transition class for matrix cells. Each cell's opacity is
+   driven by --matrix-base-opacity (set inline based on the AI's score
+   for the column). When the AI evaluation changes, the variable
+   smoothly transitions, dragging opacity along through the animation-
+   independent transition rule below. The matrix-pulse animation runs
+   on transform: scale only, so it doesn't fight the opacity transition.
+   Per-column stagger on transition-delay sweeps the change across the
+   matrix rather than all 42 cells changing in lockstep. */
+.matrix-cell {
+  opacity: var(--matrix-base-opacity, 0.35);
+  transition:
+    opacity 700ms cubic-bezier(0.45, 0, 0.55, 1),
+    --matrix-base-opacity 700ms cubic-bezier(0.45, 0, 0.55, 1),
+    background-color 700ms cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matrix-cell {
+    transition: none;
+  }
+}
+
+
+/* Winning-line pulse — applied to the 4 cells of the 4-in-a-row at
+   game end. A subtle scale pulse + a soft color-matched drop-shadow
+   that follows the cell's rounded shape (drop-shadow > box-shadow for
+   round elements: respects the silhouette instead of painting a
+   rectangular halo behind it). The --winning-glow color is set per
+   pawn variant so red wins glow red, yellow wins glow yellow. */
+.winning-cell {
+  animation: winning-pulse 1.6s ease-in-out infinite;
+}
+.winning-cell.pawn-red,
+.winning-cell.bg-pawn-red {
+  --winning-glow: var(--color-pawn-red-winning-glow, oklch(42% 0.19 25 / 0.55));
+}
+.winning-cell.pawn-yellow,
+.winning-cell.bg-pawn-yellow {
+  --winning-glow: var(--color-pawn-yellow-winning-glow, oklch(73% 0.16 72 / 0.55));
+}
+.dark .winning-cell.pawn-red,
+.dark .winning-cell.bg-pawn-red {
+  --winning-glow: var(--color-pawn-red-winning-glow, oklch(63% 0.21 25 / 0.55));
+}
+.dark .winning-cell.pawn-yellow,
+.dark .winning-cell.bg-pawn-yellow {
+  --winning-glow: var(--color-pawn-yellow-winning-glow, oklch(76% 0.16 85 / 0.55));
+}
+@keyframes winning-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 5px var(--winning-glow, currentColor));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .winning-cell {
+    animation: none;
+    filter: drop-shadow(0 0 6px var(--winning-glow, currentColor));
+  }
+}
+
+
+/* End-game UI animations.
+   .endgame-status: brief "You win" / "You lose" / "Draw" text overlay.
+     Fades in with a slight upward drift over 400ms, stays visible for
+     ~1.7s (controlled by the parent's phase timing in EndGameOverlay),
+     then unmounts.
+   .endgame-card: signup-prompt card that replaces the board area.
+     Scales up slightly + fades in over 500ms.
+   The board's blur transition is on the cell container itself, driven
+   by the same .endgame-blur class. */
+@keyframes endgame-status-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.endgame-status {
+  animation: endgame-status-in 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes endgame-card-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.endgame-card {
+  animation: endgame-card-in 500ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.endgame-blur {
+  filter: blur(3px);
+  transition: filter 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .endgame-status,
+  .endgame-card {
+    animation: none;
+  }
+  .endgame-blur {
+    transition: none;
+  }
+}
+
+
+/* ─── TopNav scroll-hide ─────────────────────────────────────────────────────
+ * The top navigation stays anchored at the top of the viewport. Once the user
+ * scrolls past a small threshold (handled by JS in RootLayout — toggles
+ * `body.is-scrolled`), it slides up off-screen and fades out.
+ *
+ * Two shapes share this behaviour:
+ *   .topnav-pill  — anon variant, floating pill centered horizontally
+ *                    (transform carries `translate(-50%, 0)` so the pill
+ *                    is itself a positioned element with `left: 50%`).
+ *   .topnav-bar   — authed variant, full-width header bar pinned to
+ *                    inset-x-0 (no horizontal translate; just a vertical
+ *                    slide on hide).
+ *
+ * Both declare a full `translate(x, y)` in resting + hidden states so the
+ * transition has matching syntax (browsers interpolate diagonally otherwise).
+ */
+.topnav-pill {
+  transform: translate(-50%, 0);
+  transition:
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.is-scrolled .topnav-pill {
+  transform: translate(-50%, -150%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.topnav-bar {
+  transform: translate(0, 0);
+  transition:
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.is-scrolled .topnav-bar {
+  transform: translate(0, -100%);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .topnav-pill,
+  .topnav-bar {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   Scrollbar styling best practices (eliminates gutter/scrollbar when not scrollable)
+   ============================================================================= */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* Hover-only scrollbars to keep clean lists scrollbar-free unless hovered/scrolling */
+.hover-scrollbar {
+  scrollbar-width: none; /* Firefox: hide unless hovered */
+}
+
+.hover-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent; /* Webkit: hide thumb by default */
+  border-radius: 9999px;
+}
+
+.hover-scrollbar:hover {
+  scrollbar-width: thin; /* Firefox: show thin scrollbar on hover */
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border); /* Webkit: show thumb on hover */
+}
+
+/* Complete scrollbar hiding (retains scroll functionality) */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Webkit */
+}
+
+/* =============================================================================
+   Pawn skin variants: sunset, royal, forest (dome box-shadow in light mode,
+   glowing halo box-shadow in dark mode)
+   ============================================================================= */
+@utility pawn-sunset-p1 {
+  background-color: var(--color-pawn-sunset-p1);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-sunset-p1 {
+  box-shadow:
+    0 0 12px oklch(70% 0.2 40 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-sunset-p2 {
+  background-color: var(--color-pawn-sunset-p2);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-sunset-p2 {
+  box-shadow:
+    0 0 12px oklch(68% 0.16 190 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-royal-p1 {
+  background-color: var(--color-pawn-royal-p1);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-royal-p1 {
+  box-shadow:
+    0 0 12px oklch(60% 0.2 280 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-royal-p2 {
+  background-color: var(--color-pawn-royal-p2);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-royal-p2 {
+  box-shadow:
+    0 0 12px oklch(78% 0.18 80 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-forest-p1 {
+  background-color: var(--color-pawn-forest-p1);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-forest-p1 {
+  box-shadow:
+    0 0 12px oklch(62% 0.18 150 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+@utility pawn-forest-p2 {
+  background-color: var(--color-pawn-forest-p2);
+  box-shadow:
+    inset 0 -2px 3px oklch(0% 0 0 / 0.18),
+    inset 0 1px 1px oklch(100% 0 0 / 0.25),
+    0 1px 2px oklch(0% 0 0 / 0.15);
+}
+.dark .pawn-forest-p2 {
+  box-shadow:
+    0 0 12px oklch(72% 0.2 340 / 0.4),
+    inset 0 -2px 4px oklch(0% 0 0 / 0.4);
+}
+
+/* Winning line glows for the new pawn skins */
+.winning-cell.pawn-sunset-p1,
+.winning-cell.bg-pawn-sunset-p1 {
+  --winning-glow: oklch(65% 0.2 40 / 0.55);
+}
+.winning-cell.pawn-sunset-p2,
+.winning-cell.bg-pawn-sunset-p2 {
+  --winning-glow: oklch(60% 0.16 190 / 0.55);
+}
+.winning-cell.pawn-royal-p1,
+.winning-cell.bg-pawn-royal-p1 {
+  --winning-glow: oklch(50% 0.2 280 / 0.55);
+}
+.winning-cell.pawn-royal-p2,
+.winning-cell.bg-pawn-royal-p2 {
+  --winning-glow: oklch(72% 0.18 80 / 0.55);
+}
+.winning-cell.pawn-forest-p1,
+.winning-cell.bg-pawn-forest-p1 {
+  --winning-glow: oklch(55% 0.18 150 / 0.55);
+}
+.winning-cell.pawn-forest-p2,
+.winning-cell.bg-pawn-forest-p2 {
+  --winning-glow: oklch(65% 0.2 340 / 0.55);
+}
+
+/* Dark mode overrides for winning glows */
+.dark .winning-cell.pawn-sunset-p1,
+.dark .winning-cell.bg-pawn-sunset-p1 {
+  --winning-glow: oklch(70% 0.2 40 / 0.55);
+}
+.dark .winning-cell.pawn-sunset-p2,
+.dark .winning-cell.bg-pawn-sunset-p2 {
+  --winning-glow: oklch(68% 0.16 190 / 0.55);
+}
+.dark .winning-cell.pawn-royal-p1,
+.dark .winning-cell.bg-pawn-royal-p1 {
+  --winning-glow: oklch(60% 0.2 280 / 0.55);
+}
+.dark .winning-cell.pawn-royal-p2,
+.dark .winning-cell.bg-pawn-royal-p2 {
+  --winning-glow: oklch(78% 0.18 80 / 0.55);
+}
+.dark .winning-cell.pawn-forest-p1,
+.dark .winning-cell.bg-pawn-forest-p1 {
+  --winning-glow: oklch(62% 0.18 150 / 0.55);
+}
+.dark .winning-cell.pawn-forest-p2,
+.dark .winning-cell.bg-pawn-forest-p2 {
+  --winning-glow: oklch(72% 0.2 340 / 0.55);
+}
+
+/* =============================================================================
+   Board variant: Frosted Obsidian (replacing classic)
+   ============================================================================= */
+@utility board-frosted-obsidian {
+  /* Frosted obsidian glass — low-opacity background so pawns show through
+     during the drop animation, blur + inset highlights for depth */
+  background-color: oklch(25% 0.02 240 / 0.15);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid oklch(100% 0 0 / 0.15);
+  box-shadow:
+    inset 0 1px 1px oklch(100% 0 0 / 0.2),
+    inset 0 -1px 1px oklch(0% 0 0 / 0.4);
+}
+.dark .board-frosted-obsidian {
+  background-color: oklch(24% 0.02 240 / 0.12);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid oklch(100% 0 0 / 0.18);
+  box-shadow:
+    inset 0 -1.5px 0 oklch(0% 0 0 / 0.5),
+    0 20px 40px -10px oklch(0% 0 0 / 0.65);
+}
+
+@utility board-frosted-obsidian-cell {
+  background-color: oklch(96% 0.015 85 / 0.5);
+  box-shadow:
+    inset 0 2px 4px oklch(0% 0 0 / 0.45),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.12);
+}
+.dark .board-frosted-obsidian-cell {
+  background-color: oklch(10% 0 0 / 0.65);
+  box-shadow:
+    inset 0 2px 5px oklch(0% 0 0 / 0.8),
+    inset 0 -1px 1px oklch(100% 0 0 / 0.05);
+}

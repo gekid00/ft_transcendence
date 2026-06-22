@@ -1,0 +1,130 @@
+---
+/**
+ * Step1Save — "Save your spot": carry-over story + auth method picker.
+ *
+ * Two display modes:
+ *   - With carry-over data (URL has ?score=… from EndGameOverlay's "Sign up"
+ *     button after an anon demo game): show the rank the user would land
+ *     at if their score became their Elo.
+ *   - Without (cold visit, no demo played yet): fall back to a generic
+ *     "save your progress" pitch.
+ *
+ * Score persistence is decoupled from the carry-over copy. The ?score=
+ * URL param is the source of truth and is mirrored into localStorage
+ * whenever it's a valid integer in [0, 4000], so it survives the 4-step
+ * signup and lands on /api/auth/signup-complete in Step4. The
+ * leaderboard fetch is only used to compute a cosmetic rank label —
+ * if it fails, the carry-over text falls back to the generic pitch,
+ * but the score is still persisted and applied at signup-complete.
+ *
+ * The 42 OAuth button passes ?intent=signup so the callback knows to redirect
+ * new accounts to /signup?step=3 (skipping the credentials step) instead of /.
+ */
+import { buttonVariants } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
+
+/** Backend URL — same pattern as getCurrentUser in ~/lib/auth.ts. Bypasses
+ *  Vite's dev-mode proxy and talks to Fastify directly. */
+function backendUrl(): string {
+  return process.env.BACKEND_URL ?? "http://localhost:3000";
+}
+
+// "Sign up" button on EndGameOverlay builds ?from=demo&result=...&score=...
+// (see apps/web/src/components/landing/EndGameOverlay.tsx). The clamp keeps
+// a hand-crafted URL from poisoning the persisted score.
+const rawScore = Astro.url.searchParams.get("score");
+const parsedScore = rawScore === null ? NaN : Number(rawScore);
+const demoScore =
+  Number.isFinite(parsedScore) && parsedScore >= 0 && parsedScore <= 4000
+    ? Math.floor(parsedScore)
+    : null;
+
+interface CarryOver {
+  rank: number;
+  rating: number;
+  rankLabel: string;
+}
+
+let carryOver: CarryOver | null = null;
+if (demoScore !== null) {
+  try {
+    const res = await fetch(`${backendUrl()}/api/leaderboard?limit=50`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      const body = (await res.json()) as { entries: { rating: number }[] };
+      const higher = body.entries.filter((e) => e.rating > demoScore).length;
+      const rank = higher + 1;
+      const rankLabel = rank <= 50 ? `#${rank}` : "off the top 50";
+      carryOver = { rank, rating: demoScore, rankLabel };
+    }
+  } catch {
+    // Network blip / leaderboard not yet wired → fall back to generic copy.
+    // demoScore is still persisted to localStorage below, so the score
+    // itself is not lost.
+    carryOver = null;
+  }
+}
+---
+
+<header class="flex flex-col gap-4">
+  <h1 class="font-display italic font-light tracking-wide text-3xl text-foreground leading-none">
+    Save your spot
+  </h1>
+  {carryOver ? (
+    <p class="text-base text-muted-foreground">
+      You finished your demo at <span class="font-bold text-foreground">{carryOver.rankLabel}</span>
+      on the leaderboard with a rating of <span class="font-mono font-bold text-foreground tabular-nums">{carryOver.rating}</span>.
+      Sign up to lock that in and start climbing.
+    </p>
+  ) : (
+    <p class="text-base text-muted-foreground">
+      Save your progress, climb the leaderboard, and unlock multiplayer + chat.
+      Takes about a minute.
+    </p>
+  )}
+</header>
+
+{demoScore !== null && (
+  <script is:inline define:vars={{ demoScore }}>
+    // Persist the demo score across the 4-step signup flow. SignupCompleteTracker
+    // (Step4) reads it, sends it in the POST /api/auth/signup-complete body, and
+    // clears it. The server is the source of truth on whether the score applies
+    // (it only updates users.rating if currently 1000, so re-running the flow
+    // can't clobber a real rating).
+    //
+    // Runs whenever a valid score is in the URL — independent of the carry-over
+    // copy above. The leaderboard fetch only powers the cosmetic rank label;
+    // a failure there must NOT lose the score.
+    try {
+      localStorage.setItem("signup.demoScore", String(demoScore));
+    } catch (_) {
+      // localStorage may be disabled (private mode, quota) — silently degrade.
+    }
+  </script>
+)}
+
+<div class="flex flex-col gap-4 pt-4">
+  <a
+    href="/signup?step=2"
+    class={cn(buttonVariants({ variant: "brand-filled", size: "pill" }), "h-11 gap-2 px-6 text-mono-md")}
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true">
+      <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+    </svg>
+    Continue with email
+  </a>
+
+  <a
+    href="/api/auth/42?intent=signup"
+    class={cn(buttonVariants({ variant: "brand-outline", size: "pill" }), "h-11 gap-2 px-6 text-mono-md")}
+  >
+    Continue with 42
+  </a>
+</div>
+
+<p class="pt-4 text-center font-mono text-mono-sm uppercase text-muted-foreground">
+  Already have an account? <a href="/login" class="font-bold text-emphasis underline underline-offset-4 transition-opacity hover:opacity-70 focus-visible:opacity-70">Sign in</a>
+</p>

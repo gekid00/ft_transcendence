@@ -1,0 +1,182 @@
+  version: "3.8"
+  services:
+    postgres:
+      image: docker.io/library/postgres:17-alpine3.23
+      container_name: postgres
+      command: >
+        sh -c "
+        until [ -f /vault/file/.db_pass ]; do
+          echo 'En attente du secret PostgreSQL...';
+          sleep 1;
+        done;
+        export POSTGRES_PASSWORD=$$(cat /vault/file/.db_pass);
+        rm -f /vault/file/.db_pass;
+        docker-entrypoint.sh postgres;"
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres_transcendence"]
+        interval: 5s
+        timeout: 5s
+        retries: 15
+        start_period: 15s
+      environment:
+        POSTGRES_DB: postgres_transcendence
+        POSTGRES_USER: postgres_transcendence
+      volumes:
+        - pgdata:/var/lib/postgresql/data
+        - vdata:/vault/file
+      depends_on:
+        vault_server:
+          condition: service_healthy
+      networks:
+        - backend
+      restart: unless-stopped
+
+    vault_server:
+      image: docker.io/hashicorp/vault:1.20
+      container_name: vault_server
+      command: server
+      ports:
+        - "8200:8200"
+      volumes:
+        - ./vault/config:/vault/config
+        - vlogs:/vault/logs
+        - vdata:/vault/file
+      networks:
+        - backend
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200; EXIT_CODE=$$?; [ $$EXIT_CODE -eq 0 ] || [ $$EXIT_CODE -eq 2 ] || { [ $$EXIT_CODE -eq 1 ] && vault status -address=http://127.0.0.1:8200 2>&1 | grep -q 'Initialized[[:space:]]\\+false'; }"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
+        start_period: 10s
+
+    vault_init:
+      image: docker.io/hashicorp/vault:1.20
+      container_name: vault_init
+      depends_on:
+        vault_server:
+          condition: service_healthy
+      command: sh /vault/scripts/init.sh
+      environment:
+        OAUTH42_CLIENT_ID: ${OAUTH42_CLIENT_ID:-}
+        OAUTH42_CLIENT_SECRET: ${OAUTH42_CLIENT_SECRET:-}
+      volumes:
+        - ./vault/scripts:/vault/scripts
+        - vdata:/vault/file
+      networks:
+        - backend
+
+    vault_unseal:
+      image: docker.io/hashicorp/vault:1.20
+      container_name: vault_unseal
+      depends_on:
+        vault_server:
+          condition: service_healthy
+      command: sh /vault/scripts/unseal.sh
+      volumes:
+        - ./vault/scripts:/vault/scripts
+        - vdata:/vault/file 
+      networks:
+        - backend
+      # Long-running watchdog (see vault/scripts/unseal.sh). Keeps Vault
+      # unsealed across vault_server restarts and rewrites /vault/file/.db_pass
+      # whenever postgres consumes it. unless-stopped so it auto-restarts on
+      # crash but stays down on `make down`.
+      restart: unless-stopped
+
+    server:
+      container_name: server
+      build:
+        context: .
+        dockerfile: containerfile
+        target: prod-server
+      depends_on:
+        postgres:
+          condition: service_healthy
+        vault_server:
+          condition: service_healthy
+        vault_init:
+          condition: service_completed_successfully
+      environment:
+        DB_HOST: postgres
+        DB_NAME: postgres_transcendence
+        DB_USER: postgres_transcendence
+        VAULT_ADDR: http://vault_server:8200
+        # OAuth 42 callback URI — must match exactly what's registered in the
+        # 42 intra app config. ModSec at :8443 (HTTPS) is the public entrypoint.
+        OAUTH42_REDIRECT_URI: https://localhost:8443/api/auth/42/callback
+        FRONTEND_URL: https://localhost:8443
+      # Expose 3000 on the host so the local Astro dev server (`make dev`)
+      # can reach the API. In production-like full-compose mode (`make build`),
+      # nothing external talks to :3000 — everything routes through ModSec
+      # at :8443.
+      ports:
+        - "3000:3000"
+      volumes:
+        - vdata:/vault/file
+        - uploads:/app/server/dist/uploads
+      networks:
+          - backend
+      restart: unless-stopped
+
+    web:
+      container_name: web
+      build:
+        context: .
+        dockerfile: containerfile
+        target: prod-web
+      depends_on:
+        - server
+      environment:
+        - BACKEND_URL=http://server:3000
+        - HOST=0.0.0.0
+        - PORT=4321
+      # ports:
+      #   - "4321:4321"
+      networks:
+        - backend
+        - frontend
+      restart: unless-stopped
+
+    mod_security:
+      image: docker.io/owasp/modsecurity-crs:4.25.0-nginx-lts
+      container_name: mod_security
+      user: root
+      command: >
+        sh -c "chown nginx:nginx /var/log/nginx/error.log &&
+        /docker-entrypoint.sh nginx -g 'daemon off;'"
+      ports:
+        - "8443:8443"
+      environment:
+        - ACCESS_LOG=/var/log/nginx/access.log
+        - SERVER_NAME=localhost
+        - SERVER_TOKENS=off
+        - PARANOIA=2
+        - MODSEC_RULE_ENGINE=ON
+        - MODSEC_AUDIT_LOG=/var/log/nginx/modsec_audit.log
+        - ERRORLOG=/var/log/nginx/modsec_error.log
+        - BACKEND=web:4321
+        - ALLOWED_METHODS=GET POST PUT PATCH HEAD DELETE
+        - RESOLVER_CONFIG=valid=10s ipv6=off
+      depends_on:
+        - server
+        - web
+      volumes:
+        - ./waf/default.conf:/etc/nginx/templates/conf.d/default.conf.template
+        # - ./waf/logs:/var/log/nginx
+      networks:
+        - frontend
+        - backend
+      stop_signal: SIGTERM
+      restart: unless-stopped
+
+  volumes:
+    pgdata:
+    vdata:
+    vlogs:
+    uploads:
+
+  networks:
+    backend:
+    frontend:

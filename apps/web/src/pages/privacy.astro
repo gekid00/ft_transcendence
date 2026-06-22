@@ -1,0 +1,79 @@
+---
+import RootLayout from "~/layouts/RootLayout.astro";
+
+const lastUpdated = "May 2026";
+
+const sections = [
+  {
+    title: "Data collected",
+    body: `Account information — your email, username, and (if you sign up with a password) a securely hashed password, never stored in plain text. Profile — optional bio, avatar, chosen skins. Game data — your match history, results, and statistics. If you log in via 42, we only receive your login, email, and avatar from their API.`,
+  },
+  {
+    title: "Usage",
+    body: `Your data powers the platform: authentication, displaying your profile to other players, matchmaking, delivering messages, and calculating your stats. We do not sell your data, show advertisements, or share anything with third parties.`,
+  },
+  {
+    title: "Security",
+    body: `Passwords are hashed with bcrypt. Sessions use signed tokens in HttpOnly cookies, inaccessible to client-side scripts. Secrets are managed via HashiCorp Vault, and traffic passes through a web application firewall (WAF).`,
+  },
+  {
+    title: "Your rights",
+    body: `You can update your profile at any time and delete your account from your settings. Upon deletion, your personal data is anonymized — your username becomes "Deleted player" — while past games remain in other players' history for data integrity.`,
+  },
+  {
+    title: "Contact",
+    body: `This is a non-commercial school project. For any questions about your data, contact the project team through the school.`,
+  },
+];
+---
+
+<RootLayout title="4thewin — Privacy Policy" description="How 4thewin handles your data.">
+  <main
+    id="main"
+    class="mx-auto w-full max-w-3xl flex-1 px-margin-mobile pt-[120px] pb-20 md:pt-[150px]"
+  >
+    <header class="page-reveal flex flex-col gap-4" style="--reveal-delay: 0.1s">
+      <span class="font-mono text-mono-sm uppercase text-accent">Legal</span>
+      <h1 class="font-display text-5xl font-semibold tracking-tight text-foreground md:text-6xl">
+        Privacy <span class="italic font-light">policy</span>
+      </h1>
+      <p class="font-mono text-mono-sm uppercase text-muted-foreground">
+        Last updated · {lastUpdated}
+      </p>
+    </header>
+
+    <p class="page-reveal mt-8 font-display text-xl font-light italic leading-relaxed text-foreground/70" style="--reveal-delay: 0.25s">
+      A student project that keeps data to a minimum — so this stays short.
+    </p>
+
+    <hr class="page-reveal mt-10 border-t border-border" style="--reveal-delay: 0.35s" />
+
+    <div class="mt-10 flex flex-col">
+      {sections.map((s, i) => (
+        <section
+          class="page-reveal grid gap-3 border-t border-border/60 py-8 first:border-t-0 md:grid-cols-[3rem_1fr] md:gap-8"
+          style={`--reveal-delay: ${0.4 + i * 0.1}s`}
+        >
+          <span class="font-mono text-mono-md text-accent md:pt-1">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <div class="flex flex-col gap-3">
+            <h2 class="font-display text-2xl font-semibold tracking-tight text-foreground">
+              {s.title}
+            </h2>
+            <p class="leading-relaxed text-foreground/80">{s.body}</p>
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <div class="page-reveal mt-12 flex justify-center" style="--reveal-delay: 1s">
+      <a
+        href="/"
+        class="font-mono text-mono-md uppercase text-muted-foreground underline underline-offset-4 decoration-transparent transition-colors duration-75 hover:text-accent hover:decoration-accent"
+      >
+        ← Back to home
+      </a>
+    </div>
+  </main>
+</RootLayout>

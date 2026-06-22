@@ -1,0 +1,23 @@
+{
+  "name": "ft_transcendence",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:server": "pnpm --filter server dev",
+    "dev:nofail": "pnpm --parallel --no-bail dev",
+    "build": "pnpm --parallel build",
+    "build:web": "pnpm --filter web build",
+    "build:server": "pnpm --filter server build",
+    "lint": "eslint ."
+  },
+  "packageManager": "pnpm@10.33.3",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "esbuild",
+      "fastify-socket.io",
+      "sharp"
+    ]
+  }
+}

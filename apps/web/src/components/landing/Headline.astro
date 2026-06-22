@@ -1,0 +1,62 @@
+---
+/**
+ * Headline — italic kicker that announces the current game state.
+ *
+ * Renders as <h2> (not h1) because it's a section-level state label, not the
+ * page title. The page's h1 lives in index.astro as a visually-hidden brand
+ * statement for screen readers and SEO. role="status" + aria-live="polite"
+ * means screen readers announce changes without interrupting the user.
+ *
+ * Currently rendered server-side only. Once Tim's game module lands, the
+ * parent <GameDemo> island will pass `state` derived from the live game
+ * observable, re-rendering on each transition.
+ *
+ * TODO(integration): wire `state` to the game module's emitted state.
+ *   Hook point: <GameDemo> island in index.astro, observed from the shared
+ *   game state machine. The headline owns no logic; it's a pure label switch.
+ */
+
+type GameState =
+  | "your-turn"
+  | "ai-thinking"
+  | "you-win"
+  | "ai-wins"
+  | "draw"
+  | "save-spot";
+
+interface Props {
+  /** Drives which canonical label is rendered. Defaults to "your-turn". */
+  state?: GameState;
+  /** Optional override when a state needs custom phrasing (rarely used). */
+  label?: string;
+}
+
+const { state = "your-turn", label } = Astro.props;
+
+const STATE_LABELS: Record<GameState, string> = {
+  "your-turn": "YOUR TURN",
+  "ai-thinking": "AI THINKING…",
+  "you-win": "YOU WIN",
+  "ai-wins": "AI WINS",
+  draw: "DRAW",
+  "save-spot": "SAVE YOUR SPOT?",
+};
+
+const display = label ?? STATE_LABELS[state];
+---
+
+<h2
+  role="status"
+  data-state={state}
+  aria-live="polite"
+  aria-atomic="true"
+  class:list={[
+    "font-display italic font-light tracking-wide",
+    "text-3xl md:text-4xl",
+    "text-muted-foreground",
+    "leading-none",
+    "select-none",
+  ]}
+>
+  {display}
+</h2>

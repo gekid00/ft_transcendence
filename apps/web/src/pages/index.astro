@@ -1,0 +1,231 @@
+---
+/**
+ * Landing page — / (home).
+ *
+ * Composition:
+ *   - TopNav (in RootLayout) floats above
+ *   - sr-only <h1> for SEO + screen readers (the brand statement)
+ *   - <Headline> kicker centered above the 3-column grid
+ *   - 3-column grid (items-start so all columns share the board's top baseline):
+ *       AITelemetry (3 cols, left)
+ *       Board       (6 cols, centered)
+ *       Leaderboard (3 cols, right)
+ *   - Mobile: Headline → Board → AITelemetry → Leaderboard via order classes
+ *
+ * AITelemetry and Leaderboard each render their own <section> with a labelled
+ * h2 (the AITelemetry h2 is sr-only because the wireframe doesn't have a
+ * visible label there). Headline is an <h2 role="status"> with aria-live
+ * announcing game state changes.
+ *
+ * All three columns render SSR-only — no JS shipped today. When Tim's game
+ * module lands, this page will wrap them in a <GameDemo client:load> island
+ * that owns shared state.
+ *
+ * TODO(integration): wrap <AITelemetry/>, <Board/>, and <Leaderboard/> in a
+ * single <GameDemo client:load> island that subscribes to the AI worker,
+ * propagates board state, and emits "game:finished" so the leaderboard can
+ * replace its dashed slot with a real row + signup CTA.
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import Headline from "~/components/landing/Headline.astro";
+import { Board, type BoardVariant } from "~/components/landing/Board";
+import { EndGameOverlay } from "~/components/landing/EndGameOverlay";
+import { AITelemetry } from "~/components/landing/AITelemetry";
+import { Leaderboard } from "~/components/landing/Leaderboard";
+import { isAuthenticated } from "~/lib/auth";
+
+// Landing is the marketing surface for anon visitors. Authed users have
+// already seen the pitch and signed up — bounce them straight to the lobby.
+const authed = await isAuthenticated(Astro);
+if (authed) {
+  return Astro.redirect("/play");
+}
+
+// Board variant from ?board=X — liquid-glass is the chosen default. The
+// other variants are kept (Board.tsx + globals.css) so we can switch skins
+// later without reimplementing them. No visible toggle in the UI; switch
+// via URL during dev (e.g. /?board=raised).
+const VALID_VARIANTS: BoardVariant[] = [
+  "default",
+  "branded",
+  "glass",
+  "wood",
+  "none",
+  "recessed",
+  "liquid-glass",
+  "raised",
+];
+const requested = Astro.url.searchParams.get("board") ?? "liquid-glass";
+const boardVariant: BoardVariant = VALID_VARIANTS.includes(requested as BoardVariant)
+  ? (requested as BoardVariant)
+  : "liquid-glass";
+---
+
+<RootLayout
+  title="4thewin — Connect 4, but smarter"
+  description="Play Connect 4 against an AI in your browser. No signup needed to start."
+  showFooter
+>
+  {/* Hero intro orchestration:
+      1. If the user has seen the hero before (localStorage flag), add
+         html.hero-seen so CSS skips all the reveal animations and shows
+         components in their final state immediately.
+      2. Otherwise, run the intro: lock <html> scroll for ~4s so the user
+         can't scroll past it on mobile, and set the flag at the end so
+         next visit skips. Reduced-motion users skip lock + animations. */}
+  <script is:inline>
+    (function () {
+      var html = document.documentElement;
+      var heroSeen = false;
+      try {
+        heroSeen = localStorage.getItem("hero-seen") === "true";
+      } catch (e) {}
+
+      if (heroSeen) {
+        html.classList.add("hero-seen");
+        return;
+      }
+
+      var reduceMotion =
+        window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduceMotion) {
+        html.style.overflow = "hidden";
+        setTimeout(function () {
+          html.style.overflow = "";
+        }, 4000);
+      }
+
+      // Mark the hero as seen after the intro completes.
+      setTimeout(function () {
+        try { localStorage.setItem("hero-seen", "true"); } catch (e) {}
+      }, 4000);
+    })();
+  </script>
+
+  <main
+    id="main"
+    class="relative mx-auto flex w-full max-w-7xl flex-col px-margin-mobile pt-28 pb-8 md:h-full md:overflow-hidden md:px-margin-desktop md:pt-28 md:pb-4"
+  >
+    {/* Hero — absolutely positioned over the entire main content area.
+        Two-line treatment with sibling spans (flex-col stacks them).
+        Words reveal one at a time from below an overflow-hidden mask:
+        each word starts off-canvas at translateY(100%) with opacity 0 +
+        blur 8px, then slides up as it fades in and unblurs. Stagger of
+        150ms between words. The word 'smarter' is in text-emphasis +
+        font-medium so it pops against the dimmer surrounding text. */}
+    <h1
+      id="hero-pitch"
+      class="hero-letters absolute top-28 right-0 left-0 z-10 flex h-[calc(100vh-7rem)] flex-col items-center justify-center px-margin-mobile text-center font-display font-light italic tracking-tight text-foreground/70 md:bottom-0 md:h-auto md:px-margin-desktop"
+    >
+      <span class="text-5xl leading-none md:text-7xl lg:text-[7.5rem]">
+        <span class="hero-word" style="--i:0">
+          <span class="hero-word-inner">Connect</span>
+        </span>{" "}
+        <span class="hero-word" style="--i:1">
+          <span class="hero-word-inner">4,</span>
+        </span>
+      </span>
+      <span class="text-7xl leading-[0.95] md:text-[6.5rem] lg:text-[9rem]">
+        <span class="hero-word" style="--i:2">
+          <span class="hero-word-inner">but</span>
+        </span>{" "}
+        <span class="hero-word" style="--i:3">
+          <span class="hero-word-inner text-emphasis font-medium">smarter</span>
+        </span><span class="hero-word" style="--i:4">
+          <span class="hero-word-inner">.</span>
+        </span>
+      </span>
+    </h1>
+
+    {/* Game grid — board + kicker stacked in the middle column, AITelemetry
+        and Leaderboard flanking. items-center vertically centers all three
+        columns together so the board reads as the focal point with its
+        companions anchored to it. The kicker (YOUR TURN) was previously
+        a separate row above the grid, but that put it stuck at the top of
+        the page with a big gap before the board — visually disconnected.
+        Putting it INSIDE the board column means it always sits right above
+        the board no matter how the layout flexes. */}
+    <div class="grid grid-cols-1 gap-16 md:flex-1 md:grid-cols-12 md:items-center md:gap-gutter">
+
+      {/* AITelemetry — desktop left, mobile after the board */}
+      <div
+        class="page-reveal order-2 flex justify-center md:order-1 md:col-span-3"
+        style="--reveal-delay: 2.9s"
+      >
+        <AITelemetry client:load />
+      </div>
+
+      {/* Middle column: board with prompt positioned above it.
+          Mobile: flex-col with the prompt in normal flow above the board.
+          Desktop (md+): prompt is ABSOLUTELY positioned above the board, so
+          the column's flex height equals just the board's height. With
+          items-center on the grid, all 3 columns then align around the
+          board's center — the side panels are anchored to the board, not
+          to the prompt+board block.
+
+          The prompt 'Click a column to play.' replaces the old YOUR TURN
+          state label. Same italic Fraunces voice as the hero, dimmed to
+          text-foreground/70 so it's an invitation rather than a heavy
+          headline. Hides on first click via inline JS (board not yet
+          wired; once the game module lands the click handler will
+          drive both piece-drop AND prompt dismissal). */}
+      <div class="order-1 flex flex-col items-center gap-8 md:order-2 md:col-span-6 md:gap-0 md:relative">
+        <p
+          id="play-prompt"
+          class="page-reveal flex w-full justify-center text-center font-display text-2xl font-light italic text-foreground/70 select-none md:absolute md:bottom-[calc(100%+3.75rem)] md:left-0 md:text-3xl"
+          style="--reveal-delay: 2.5s"
+        >
+          Pick a column.
+        </p>
+        <div
+          class="page-reveal relative"
+          style="--reveal-delay: 2.7s"
+        >
+          <Board variant={boardVariant} client:load />
+          <EndGameOverlay authed={authed} client:load />
+        </div>
+      </div>
+
+      {/* Leaderboard — desktop right, mobile last */}
+      <div
+        class="page-reveal order-3 flex justify-center md:order-3 md:col-span-3"
+        style="--reveal-delay: 2.9s"
+      >
+        <Leaderboard client:load />
+      </div>
+
+    </div>
+  </main>
+
+  {/* SVG filter for the liquid-glass board variant.
+      Defines the lg-dist filter referenced by `.lg-filter` in globals.css.
+      feTurbulence generates fractal noise; feDisplacementMap warps the
+      backdrop using the noise as a displacement map → refraction effect.
+      Browser support: works in Chromium (Chrome/Edge); falls back to a
+      plain frosted blur in Safari/Firefox where backdrop-filter + SVG
+      filter URL isn't supported. */}
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none;">
+    <defs>
+      <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="2" seed="92" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+        <feDisplacementMap in="SourceGraphic" in2="blurred" scale="70" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  {/* Hide the play-prompt on first click on the board. Inline so it runs
+      without hydration overhead. Will be replaced by the game module's
+      first-move handler once the AI/click pipeline is wired. */}
+  <script is:inline>
+    (function () {
+      var prompt = document.getElementById("play-prompt");
+      var board = document.querySelector('[role="grid"][aria-label="Connect 4 board"]');
+      if (!prompt || !board) return;
+      board.addEventListener("click", function () {
+        prompt.style.transition = "opacity 0.3s ease-out";
+        prompt.style.opacity = "0";
+      }, { once: true });
+    })();
+  </script>
+</RootLayout>

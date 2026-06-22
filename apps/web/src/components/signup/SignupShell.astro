@@ -1,0 +1,57 @@
+---
+/**
+ * SignupShell — focused card layout for the 4-step signup flow.
+ *
+ * Default width: max-w-md (~448px) — single-column, focused. Used by
+ * steps 1, 2, 4 which have minimal form content.
+ *
+ * Wide variant (`wide` prop): max-w-2xl (~672px) on md+. Step 3 uses it
+ * to lay out avatar/bio/pawn/grid in a 2-column grid on desktop without
+ * scrolling. Mobile stays single-column either way.
+ *
+ * Progress tracker sits above the card so the step-4 connect animation
+ * has room to breathe outside the card padding.
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import { SignupProgress } from "~/components/signup/SignupProgress";
+
+interface Props {
+  current: 0 | 1 | 2 | 3 | 4;
+  title?: string;
+  /** Wider card on desktop — used by Step 3 to fit a 2-column form. */
+  wide?: boolean;
+}
+
+const { current, title = "Sign up", wide = false } = Astro.props;
+
+const widthClass = wide ? "max-w-md md:max-w-3xl" : "max-w-md";
+---
+
+<RootLayout title={`4thewin — ${title}`} description="Save your spot and unlock multiplayer." showFooter>
+  <main
+    id="main"
+    class:list={[
+      "mx-auto grid w-full flex-1 grid-rows-[minmax(100px,1fr)_auto_minmax(0,1fr)] px-margin-mobile pt-[126px] pb-4 md:grid-rows-[1fr_auto_1fr] md:pt-[113px] md:pb-0",
+      widthClass,
+    ]}
+  >
+    {/* Top spacer — minmax(70px, 1fr) guarantees the progress tracker
+        always has breathing room above the card. Grows to center the
+        card vertically when the card is short enough to allow it. */}
+    <div aria-hidden="true"></div>
+
+    {/* Card with the steps tracker positioned just above it */}
+    <div class="relative">
+      <div class="absolute right-0 bottom-[calc(100%+1.5rem)] left-0">
+        <SignupProgress current={current} client:load />
+      </div>
+
+      <div class="rounded-xl border border-border bg-surface p-6 shadow-sm md:p-8">
+        <slot />
+      </div>
+    </div>
+
+    {/* Bottom spacer — minmax(0, 1fr) so it can collapse for tall cards. */}
+    <div aria-hidden="true"></div>
+  </main>
+</RootLayout>

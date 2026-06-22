@@ -1,0 +1,123 @@
+---
+/**
+ * /settings — user preferences (authed).
+ *
+ * Single scrollable page with four cards stacked: Profile · Appearance ·
+ * Account · Privacy. Each card is its own React island for clean
+ * state isolation; the .astro file is now a thin shell that fetches
+ * the current profile server-side and hydrates the islands.
+ *
+ * Save semantics:
+ *   - Auto-save on change: theme, pawn skin, grid skin, board variant.
+ *   - Explicit save: username, bio, email (re-auth modal), password
+ *     (re-auth modal), 42 OAuth unlink (confirmation), delete account
+ *     (type-to-confirm).
+ *
+ * Auth: gated behind isAuthenticated(). Unauthed visitors get bounced
+ * to /signup?step=1. The gate is double-checked here (the previous
+ * mock-only version only called isAuthenticated for UI toggles).
+ *
+ * Backend status (see HANDOFF_BACKEND.md):
+ *   - GET /api/profile, PUT /api/profile (exists) — used by Profile + Appearance
+ *   - POST /api/profile/avatar (exists) — used by Profile
+ *   - PUT /api/profile/email + /password (exist) — used by Account
+ *   - POST /api/auth/oauth42/unlink (added in this branch) — used by Account
+ *   - DELETE /api/profile (exists) — used by Account
+ *   - Privacy fields need new schema columns + /api/blocked endpoint —
+ *     deferred to a follow-up. The Privacy card is a stub.
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import { isAuthenticated } from "~/lib/auth";
+import type { ProfileMe } from "~/lib/api/profile";
+import { SettingsProfile } from "~/components/settings/SettingsProfile";
+import { SettingsAppearance } from "~/components/settings/SettingsAppearance";
+import { SettingsAccount } from "~/components/settings/SettingsAccount";
+
+if (!(await isAuthenticated(Astro))) {
+  return Astro.redirect("/signup?step=1");
+}
+
+// Same pattern as getCurrentUser in ~/lib/auth.ts — talks to Fastify
+// directly (bypasses Vite's dev proxy) with the auth_token cookie
+// forwarded manually. Failures here fall through to a minimal stub
+// so the page never 500s; the islands can re-fetch on mount.
+function backendUrl(): string {
+  return process.env.BACKEND_URL ?? "http://localhost:3000";
+}
+
+async function loadProfileSSR(): Promise<ProfileMe> {
+  const authToken = Astro.cookies.get("auth_token")?.value;
+  if (!authToken) {
+    // Should be caught by the gate above, but defensive.
+    throw new Error("no auth_token cookie");
+  }
+  const res = await fetch(`${backendUrl()}/api/profile`, {
+    headers: { Cookie: `auth_token=${authToken}` },
+    signal: AbortSignal.timeout(2000),
+  });
+  if (res.status === 401) {
+    // Cookie expired between the isAuthenticated check and the fetch —
+    // treat as unauthed and bounce to /login.
+    throw new Error("unauthorized");
+  }
+  if (!res.ok) {
+    throw new Error(`profile fetch ${res.status}`);
+  }
+  return (await res.json()) as ProfileMe;
+}
+
+let profile: ProfileMe;
+try {
+  profile = await loadProfileSSR();
+} catch (e) {
+  if (e instanceof Error && e.message === "unauthorized") {
+    return Astro.redirect("/login?next=" + encodeURIComponent("/settings"));
+  }
+  // Network blip / backend down — render a minimal placeholder. The
+  // islands would call fetchMyProfile on mount and self-recover; here
+  // we just don't want to 500 the page.
+  profile = {
+    id: 0,
+    email: "",
+    username: "",
+    avatarUrl: null,
+    bio: null,
+    pawnSkin: "default",
+    gridSkin: "liquid-glass",
+    oauth42Linked: false,
+    rating: 1000,
+    peakRating: 1000,
+    rank: 0,
+    title: "Apprentice" as const,
+  };
+}
+---
+
+<RootLayout
+  title="Settings — 4thewin"
+  description="Customize your profile, appearance, and account."
+>
+  <main
+    id="main"
+    class="mx-auto w-full max-w-3xl px-margin-mobile pt-28 pb-16 md:px-margin-desktop md:pt-32"
+  >
+    <header class="page-reveal mb-8">
+      <p class="font-mono text-mono-sm uppercase text-muted-foreground">
+        Settings
+      </p>
+      <h1 class="mt-1 font-display italic text-4xl tracking-tight md:text-5xl">
+        Customize
+      </h1>
+      <p class="mt-2 font-sans text-base text-muted-foreground">
+        Profile, appearance, and account. Changes save automatically
+        unless a Save button says otherwise.
+      </p>
+    </header>
+
+    <div class="flex flex-col gap-gutter">
+      <SettingsProfile client:load initial={profile} />
+      <SettingsAppearance client:load initial={profile} />
+      <SettingsAccount client:load initial={profile} />
+    </div>
+  </main>
+</RootLayout>

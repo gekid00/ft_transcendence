@@ -1,0 +1,144 @@
+---
+// Token + type scale preview. Standalone page — not linked from production nav.
+// Dark mode is forced for the right column via a wrapping `.dark` class.
+import "~/styles/globals.css";
+
+const tokenGroups: Array<{ label: string; tokens: Array<{ name: string; cls: string }> }> = [
+  {
+    label: "Foundation",
+    tokens: [
+      { name: "background", cls: "bg-background text-foreground" },
+      { name: "foreground", cls: "bg-foreground text-background" },
+      { name: "surface", cls: "bg-surface text-surface-foreground border border-border" },
+      { name: "muted", cls: "bg-muted text-muted-foreground" },
+      { name: "muted-foreground", cls: "bg-muted-foreground text-background" },
+    ],
+  },
+  {
+    label: "Action",
+    tokens: [
+      { name: "primary", cls: "bg-primary text-primary-foreground" },
+      { name: "secondary (transparent)", cls: "bg-secondary text-secondary-foreground border border-border" },
+      { name: "accent", cls: "bg-accent text-accent-foreground" },
+      { name: "destructive", cls: "bg-destructive text-destructive-foreground" },
+    ],
+  },
+  {
+    label: "Form / borders",
+    tokens: [
+      { name: "border", cls: "bg-background text-foreground border-2 border-border" },
+      { name: "input", cls: "bg-input text-foreground" },
+      { name: "ring (focus)", cls: "bg-background text-foreground outline-2 outline-offset-2 outline-ring" },
+    ],
+  },
+  {
+    label: "Game",
+    tokens: [
+      { name: "board", cls: "bg-board text-foreground" },
+      { name: "board-cell", cls: "bg-board-cell text-foreground" },
+      { name: "pawn-red", cls: "pawn-red text-background" },
+      { name: "pawn-yellow", cls: "pawn-yellow text-background" },
+    ],
+  },
+];
+
+const typeSamples = [
+  { cls: "font-display italic text-display", label: "display 120/100 italic", text: "4thewin" },
+  { cls: "font-display italic text-display-mobile", label: "display-mobile 64/56 italic", text: "4thewin" },
+  { cls: "font-display text-4xl tracking-tight", label: "4xl headline", text: "Connect 4, but smarter" },
+  { cls: "font-display text-3xl tracking-tight", label: "3xl headline (mobile)", text: "Connect 4, but smarter" },
+  { cls: "font-sans text-2xl", label: "2xl sans", text: "The quick brown fox jumps over the lazy dog" },
+  { cls: "font-sans text-base leading-relaxed max-w-prose", label: "base body", text: "Public Sans is a strong, neutral, principles-driven, open source typeface for text or display." },
+  { cls: "font-sans text-metric", label: "metric 24/24 -0.01em w600", text: "2854 · 94.8%" },
+  { cls: "font-mono text-mono-md uppercase", label: "mono-md 13/20 0.05em", text: "Depth: 8  ·  Nodes/sec: 142k  ·  Eval Time: 42ms" },
+  { cls: "font-mono text-mono-sm uppercase", label: "mono-sm 11/16 0.1em", text: "QuantumDrop  ·  2854  ·  94.8%" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>tokens — 4thewin</title>
+  </head>
+  <body class="font-sans">
+    <header class="border-b border-border px-margin-desktop py-8">
+      <p class="font-mono text-mono-sm uppercase text-muted-foreground">design language preview</p>
+      <h1 class="mt-2 font-display italic text-4xl tracking-tight">tokens &amp; type scale</h1>
+      <p class="mt-2 max-w-prose text-muted-foreground">
+        Left column = light mode (default <code class="font-mono text-sm">html</code>). Right column = dark mode (forced via wrapping <code class="font-mono text-sm">.dark</code>).
+        Visual diff between the columns is what the theme switcher will produce in Task 3.
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2">
+      <!-- Light column -->
+      <section class="bg-background px-margin-mobile py-12 md:px-margin-desktop">
+        <span class="inline-block rounded-full border border-border px-3 py-1 font-mono text-mono-sm uppercase">light</span>
+        <div class="mt-8 space-y-12">
+          <div>
+            <h2 class="font-display text-2xl tracking-tight">Type scale</h2>
+            <ul class="mt-4 space-y-6">
+              {typeSamples.map((s) => (
+                <li>
+                  <p class="font-mono text-mono-sm uppercase text-muted-foreground">{s.label}</p>
+                  <p class={`mt-2 ${s.cls}`}>{s.text}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 class="font-display text-2xl tracking-tight">Color tokens</h2>
+            {tokenGroups.map((g) => (
+              <div class="mt-6">
+                <p class="font-mono text-mono-sm uppercase text-muted-foreground">{g.label}</p>
+                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {g.tokens.map((t) => (
+                    <div class={`rounded-lg p-4 ${t.cls}`}>
+                      <p class="font-mono text-mono-sm">{t.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Dark column (forced) -->
+      <section class="dark bg-background px-margin-mobile py-12 text-foreground md:px-margin-desktop">
+        <span class="inline-block rounded-full border border-border px-3 py-1 font-mono text-mono-sm uppercase">dark</span>
+        <div class="mt-8 space-y-12">
+          <div>
+            <h2 class="font-display text-2xl tracking-tight">Type scale</h2>
+            <ul class="mt-4 space-y-6">
+              {typeSamples.map((s) => (
+                <li>
+                  <p class="font-mono text-mono-sm uppercase text-muted-foreground">{s.label}</p>
+                  <p class={`mt-2 ${s.cls}`}>{s.text}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 class="font-display text-2xl tracking-tight">Color tokens</h2>
+            {tokenGroups.map((g) => (
+              <div class="mt-6">
+                <p class="font-mono text-mono-sm uppercase text-muted-foreground">{g.label}</p>
+                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {g.tokens.map((t) => (
+                    <div class={`rounded-lg p-4 ${t.cls}`}>
+                      <p class="font-mono text-mono-sm">{t.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

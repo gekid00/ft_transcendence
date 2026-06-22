@@ -1,0 +1,96 @@
+---
+import RootLayout from "~/layouts/RootLayout.astro";
+
+const stack = [
+  { label: "Frontend", value: "Astro + React, Tailwind CSS" },
+  { label: "Backend", value: "Fastify, Socket.io, PostgreSQL + Drizzle" },
+  { label: "Security", value: "ModSecurity WAF, HashiCorp Vault, JWT" },
+  { label: "Infra", value: "Podman containers, single-command deployment" },
+];
+
+const team = [
+  { name: "Rayane", role: "Tech Lead · Backend" },
+  { name: "Killian", role: "Product Owner · Frontend" },
+  { name: "Senshy", role: "Cybersecurity" },
+  { name: "Tim", role: "Backend · Game Logic" },
+  { name: "Adam", role: "Project Manager" },
+];
+---
+
+<RootLayout title="4thewin — About" description="What 4thewin is and who built it.">
+  <main
+    id="main"
+    class="mx-auto w-full max-w-3xl flex-1 px-margin-mobile pt-[120px] pb-20 md:pt-[150px]"
+  >
+    <header class="page-reveal flex flex-col gap-4" style="--reveal-delay: 0.1s">
+      <span class="font-mono text-mono-sm uppercase text-accent">About</span>
+      <h1 class="font-display text-5xl font-semibold tracking-tight text-foreground md:text-6xl">
+        Connect 4, <span class="italic font-light">but better.</span>
+      </h1>
+    </header>
+
+    <p class="page-reveal mt-8 font-display text-xl font-light italic leading-relaxed text-foreground/70" style="--reveal-delay: 0.25s">
+      Play against an AI directly in your browser — or sign up to
+      challenge other players, track your stats, and chat in real time.
+    </p>
+
+    <hr class="page-reveal mt-10 border-t border-border" style="--reveal-delay: 0.35s" />
+
+    <div class="mt-10 flex flex-col">
+      <section class="page-reveal grid gap-3 py-8 md:grid-cols-[3rem_1fr] md:gap-8" style="--reveal-delay: 0.4s">
+        <span class="font-mono text-mono-md text-accent md:pt-1">01</span>
+        <div class="flex flex-col gap-3">
+          <h2 class="font-display text-2xl font-semibold tracking-tight text-foreground">The project</h2>
+          <p class="leading-relaxed text-foreground/80">
+            The final project of the 42 common core — a full-stack web application
+            built from scratch: real-time multiplayer via WebSockets, an
+            AI opponent using minimax with alpha-beta pruning, user
+            accounts, friends system, chat and notifications, all
+            behind a hardened security layer.
+          </p>
+        </div>
+      </section>
+
+      <section class="page-reveal grid gap-3 border-t border-border/60 py-8 md:grid-cols-[3rem_1fr] md:gap-8" style="--reveal-delay: 0.5s">
+        <span class="font-mono text-mono-md text-accent md:pt-1">02</span>
+        <div class="flex flex-col gap-4">
+          <h2 class="font-display text-2xl font-semibold tracking-tight text-foreground">Under the hood</h2>
+          <dl class="flex flex-col divide-y divide-border/60">
+            {stack.map((row) => (
+              <div class="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-6">
+                <dt class="font-mono text-mono-sm uppercase text-muted-foreground sm:w-28 sm:shrink-0">
+                  {row.label}
+                </dt>
+                <dd class="text-foreground/80">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      <section class="page-reveal grid gap-3 border-t border-border/60 py-8 md:grid-cols-[3rem_1fr] md:gap-8" style="--reveal-delay: 0.6s">
+        <span class="font-mono text-mono-md text-accent md:pt-1">03</span>
+        <div class="flex flex-col gap-4">
+          <h2 class="font-display text-2xl font-semibold tracking-tight text-foreground">The team</h2>
+          <div class="flex flex-col divide-y divide-border/60">
+            {team.map((member) => (
+              <div class="flex items-baseline justify-between gap-4 py-3">
+                <span class="font-display text-lg font-medium text-foreground">{member.name}</span>
+                <span class="font-mono text-mono-sm uppercase text-muted-foreground">{member.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="page-reveal mt-12 flex justify-center" style="--reveal-delay: 0.8s">
+      <a
+        href="/"
+        class="font-mono text-mono-md uppercase text-muted-foreground underline underline-offset-4 decoration-transparent transition-colors duration-75 hover:text-accent hover:decoration-accent"
+      >
+        ← Back to home
+      </a>
+    </div>
+  </main>
+</RootLayout>

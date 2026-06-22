@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# allowBuilds:
+#   bcrypt: false
+#   esbuild: false
+#   sharp: true
+inject-workspace-packages: true

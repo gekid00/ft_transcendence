@@ -1,0 +1,250 @@
+---
+/**
+ * TopNav — two shapes, one component.
+ *
+ * Anon (landing / login / signup): floating pill, centered horizontally,
+ *   contents: brand · theme · Login · Sign up.
+ *
+ * Authed (anywhere else): full-width bar pinned to top:0 / inset-x:0,
+ *   contents: brand · — · Play · theme · Logout · [avatar | username | rating].
+ *   The avatar + name + rating group is itself the "Profile" link — clicking
+ *   anywhere on it routes to /profile.
+ *
+ * Both shapes share the scroll-hide behaviour wired by RootLayout (toggles
+ * `body.is-scrolled` past a threshold). CSS in globals.css handles the
+ * transform: pill slides up keeping its -50%X centering, bar slides up
+ * straight.
+ *
+ * Props:
+ *   user — CurrentUser | null. Drives which shape renders.
+ */
+import { Button, buttonVariants } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
+import type { CurrentUser } from "~/lib/auth";
+import NotificationDropdown from "~/components/social/NotificationDropdown";
+
+interface Props {
+  /** Full user object (null when not signed in). Set by RootLayout. */
+  user?: CurrentUser | null;
+}
+
+const { user = null } = Astro.props;
+const authed = user !== null;
+const initial = user?.username?.[0]?.toUpperCase() ?? "?";
+
+// Brand mark — same SVG shared by both shapes. Extracted into a fragment-
+// friendly inline render via the helper below so we don't duplicate the
+// 4-line text markup. (Astro doesn't have a clean partial mechanism that
+// keeps types intact, so this is just declared once and used twice.)
+---
+
+{!authed && (
+  <header
+    class:list={[
+      "fixed top-6 left-1/2 z-50",
+      "w-auto max-w-[calc(100%-2*var(--spacing-margin-mobile))]",
+      "flex items-center justify-between gap-5 xs:gap-8",
+      "rounded-full border border-foreground bg-muted",
+      "px-5 py-2 xs:px-7 xs:py-2.5",
+      "shadow-sm",
+      "topnav-pill",
+    ]}
+    aria-label="Site navigation"
+  >
+    {/* Brand */}
+    <a href="/" class="block text-foreground" aria-label="4thewin — home">
+      <svg viewBox="0 0 88 48" class="h-9 w-auto xs:h-12" fill="currentColor" aria-hidden="true">
+        <text x="0"  y="42" style="font-family: var(--font-display)" font-style="italic" font-size="48" font-weight="500">4</text>
+        <text x="28" y="24" style="font-family: var(--font-display)" font-style="italic" font-size="24">the</text>
+        <text x="28" y="42" style="font-family: var(--font-display)" font-style="italic" font-size="36">win</text>
+      </svg>
+    </a>
+
+    {/* Right group: theme + auth CTAs */}
+    <div class="flex items-center gap-2.5 xs:gap-3">
+      <button
+        type="button"
+        data-theme-toggle
+        aria-label="Toggle theme"
+        title="Toggle theme"
+        class="mr-2 grid size-9 shrink-0 place-items-center rounded-full text-foreground transition-all duration-150 ease-out hover:bg-foreground hover:text-background active:scale-[0.96] xs:mr-4"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 dark:hidden" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden size-4 dark:block" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+      </button>
+
+      <a
+        href="/login"
+        class={cn(buttonVariants({ variant: "brand-outline", size: "pill" }), "hidden sm:inline-flex")}
+        data-todo-integration="POST /api/auth/login — wire to apps/server"
+      >
+        Login
+      </a>
+
+      <a
+        href="/signup"
+        class={cn(buttonVariants({ variant: "brand-filled", size: "pill" }), "gap-1.5")}
+        data-todo-integration="POST /api/auth/signup — wire to apps/server"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5" aria-hidden="true">
+          <path d="M5 12h14"></path>
+          <path d="m12 5 7 7-7 7"></path>
+        </svg>
+        Sign up
+      </a>
+    </div>
+  </header>
+)}
+
+{authed && (
+  <header
+    class:list={[
+      "fixed inset-x-0 top-0 z-50",
+      "flex items-center justify-between gap-4",
+      "px-margin-mobile py-3 xs:px-margin-desktop",
+      "topnav-bar",
+    ]}
+    aria-label="Site navigation"
+  >
+    {/* Brand — sits against the viewport's left margin (margin-mobile /
+        margin-desktop tokens) so it hugs the edge of the screen rather
+        than aligning with page content's max-w-7xl gutter. */}
+    <a href="/play" class="block text-foreground" aria-label="4thewin — lobby">
+      <svg viewBox="0 0 88 48" class="h-9 w-auto xs:h-12" fill="currentColor" aria-hidden="true">
+        <text x="0"  y="42" style="font-family: var(--font-display)" font-style="italic" font-size="48" font-weight="500">4</text>
+        <text x="28" y="24" style="font-family: var(--font-display)" font-style="italic" font-size="24">the</text>
+        <text x="28" y="42" style="font-family: var(--font-display)" font-style="italic" font-size="36">win</text>
+      </svg>
+    </a>
+
+    {/* Right group — utility icons clustered tight, then a slightly bigger
+        gap before the avatar group so identity reads as the cluster's
+        anchor (industry convention: avatar is the rightmost endpoint).
+        Order: [theme] [logout] [avatar+name+rating]. */}
+    <div class="flex items-center gap-2 xs:gap-3">
+
+      {/* Theme toggle */}
+      <button
+        type="button"
+        data-theme-toggle
+        aria-label="Toggle theme"
+        title="Toggle theme"
+        class="grid size-9 shrink-0 place-items-center rounded-full text-foreground transition-all duration-150 ease-out hover:bg-foreground hover:text-background active:scale-[0.96]"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 dark:hidden" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden size-4 dark:block" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+      </button>
+
+      {/* Settings */}
+      <a
+        href="/settings"
+        aria-label="Settings"
+        title="Settings"
+        class="grid size-9 shrink-0 place-items-center rounded-full text-foreground transition-all duration-150 ease-out hover:bg-foreground hover:text-background active:scale-[0.96]"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </a>
+
+      {/* Logout — POST form (works without JS). Sits between theme and the
+          avatar so the avatar is the rightmost endpoint of the cluster. */}
+      <form method="POST" action="/api/auth/logout" class="contents">
+        <button
+          type="submit"
+          aria-label="Logout"
+          title="Logout"
+          class="grid size-9 shrink-0 place-items-center rounded-full text-foreground transition-all duration-150 ease-out hover:bg-foreground hover:text-background active:scale-[0.96]"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+      </form>
+
+      {/* Profile link — avatar + username + rating. Rightmost endpoint of
+          the right cluster. Wider left margin so it visually separates
+          from the utility icons. */}
+      <a
+        href="/profile"
+        class="ml-2 flex items-center gap-2.5 rounded-md p-1 pr-2 transition-colors hover:bg-foreground/10 focus-visible:outline-none focus-visible:bg-foreground/10 xs:ml-3"
+      >
+        {user?.avatarUrl ? (
+          <img
+            src={user.avatarUrl}
+            alt=""
+            id="topnav-avatar"
+            class="size-9 shrink-0 rounded-md border border-border object-cover"
+          />
+        ) : (
+          <span
+            id="topnav-initial"
+            aria-hidden="true"
+            class="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-foreground font-display italic text-base text-background"
+          >
+            {initial}
+          </span>
+        )}
+        <span class="hidden flex-col leading-tight xs:flex">
+          <span id="topnav-username" class="truncate font-sans text-sm font-semibold text-foreground">
+            {user!.username}
+          </span>
+          <span class="font-mono text-mono-sm uppercase tabular-nums text-muted-foreground">
+            {user!.title} · {user!.rating}{user!.gamesPlayed < 20 ? "?" : ""}
+          </span>
+        </span>
+      </a>
+
+      {/* Notification Dropdown using client:load to enable SSR and prevent layout shift / icon pop-in */}
+      <NotificationDropdown client:load />
+    </div>
+  </header>
+
+  <script>
+    // In-place username sync. The SettingsProfile island dispatches
+    // 'username-changed' after a successful PUT /api/profile { username }.
+    // The TopNav is server-rendered (Astro), so it would otherwise stay
+    // stale until the next full reload. We patch two DOM nodes:
+    //   - #topnav-username — the visible name on the right cluster.
+    //   - #topnav-initial  — the avatar tile (only shown if the user
+    //     hasn't uploaded an avatar; if they have, the <img> covers the
+    //     initial and the update is invisible but harmless).
+    // The script is hoisted by Astro into a per-page bundle; it runs
+    // once per page load and only listens.
+    document.addEventListener("username-changed", (event) => {
+      const username = event instanceof CustomEvent ? event.detail?.username : null;
+      if (typeof username !== "string" || username.length === 0) return;
+      const nameEl = document.getElementById("topnav-username");
+      if (nameEl) nameEl.textContent = username;
+      const initialEl = document.getElementById("topnav-initial");
+      if (initialEl) initialEl.textContent = username[0]?.toUpperCase() ?? "?";
+    });
+  </script>
+)}

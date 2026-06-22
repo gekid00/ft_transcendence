@@ -1,0 +1,60 @@
+---
+/**
+ * SiteFooter — pure Astro, ships zero JS.
+ *
+ * Slim footer (~60px tall on desktop). On mobile it stacks to two rows.
+ * Wordmark + copyright share a baseline; links right-aligned on desktop,
+ * centered on mobile.
+ *
+ * Links to /about, /how-to-play, /privacy, /terms (all live pages).
+ */
+
+const year = new Date().getFullYear();
+
+const links: Array<{ label: string; href: string }> = [
+  { label: "About", href: "/about" },
+  { label: "How to play", href: "/how-to-play" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+];
+---
+
+<footer class="mt-8 border-t border-border">
+  <div class="mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-margin-mobile py-5 xs:flex-row xs:justify-between xs:gap-6 xs:px-margin-desktop">
+
+    <div class="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 xs:justify-start">
+      <a
+        href="/"
+        class="font-display italic text-xl tracking-tight leading-none text-foreground"
+        aria-label="4thewin — home"
+      >
+        4thewin
+      </a>
+      <span class="font-mono text-mono-sm uppercase text-muted-foreground">
+        © {year} · 42 student project
+      </span>
+    </div>
+
+    <nav aria-label="Footer">
+      <ul class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 xs:gap-x-6">
+        {links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class:list={[
+                "font-mono text-mono-sm uppercase text-muted-foreground",
+                "underline underline-offset-4 decoration-transparent",
+                "transition-colors duration-75 ease-linear",
+                "hover:text-accent hover:decoration-accent",
+                "focus-visible:text-accent",
+              ]}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+  </div>
+</footer>

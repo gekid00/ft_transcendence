@@ -1,0 +1,247 @@
+---
+/**
+ * /play/m/[id] — multiplayer game page (authed).
+ *
+ * Same 3-col grid as /play/ai/[id] but the left column is a real-time
+ * chat panel with the opponent instead of AITelemetry. The right column
+ * shows the opponent card + game controls (no AI-specific form/streak).
+ *
+ * Chat panel:
+ *   - Header: opponent avatar + username + status dot
+ *   - Message list (mock, scrollable)
+ *   - Input row: text field + send button
+ *   - Inline JS handles local send (appends to the list) — real wiring
+ *     uses socket.io chat events once Tim's game socket lands.
+ *
+ * Board: liquid-glass variant, same as vs-AI.
+ * Auth: gated behind isAuthenticated() (matches /play/ai/[id]).
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import { Board } from "~/components/landing/Board";
+import { EndGameOverlay } from "~/components/landing/EndGameOverlay";
+import { PlayerTimer } from "~/components/landing/PlayerTimer";
+import { RightToolPanel } from "~/components/landing/RightToolPanel";
+import { buttonVariants } from "~/components/ui/button";
+import { getCurrentUser } from "~/lib/auth";
+import { cn } from "~/lib/utils";
+import ChatInterface from "~/components/chat/ChatInterface";
+
+const currentUser = await getCurrentUser(Astro);
+if (!currentUser) {
+  return Astro.redirect("/signup?step=1");
+}
+const authed = true;
+
+const { id: gameIdStr } = Astro.params;
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:3000";
+const authToken = Astro.cookies.get("auth_token")?.value;
+
+// 1. If "test", create a test multiplayer game and redirect
+if (gameIdStr === "test" && authToken) {
+  try {
+    const timeParam = Astro.url.searchParams.get("time");
+    const timeLimit = timeParam ? parseInt(timeParam, 10) : 600;
+
+    const res = await fetch(`${backendUrl}/api/games/test-multiplayer`, {
+      method: "POST",
+      headers: {
+        Cookie: `auth_token=${authToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ timePerPlayerSeconds: timeLimit }),
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Astro.redirect(`/play/m/${data.gameId}`);
+    }
+  } catch (e) {
+    // fallback silently to /play
+    return Astro.redirect("/play");
+  }
+}
+
+const gameId = parseInt(gameIdStr ?? "", 10);
+if (isNaN(gameId)) {
+  return Astro.redirect("/play");
+}
+
+let gridSkin = "liquid-glass"; // fallback default
+let pawnSkin = "default";
+let gameData: any = null;
+let opponentData: any = null;
+let userStats: any = null;
+let opponentId: number | null = null;
+
+if (authToken) {
+  try {
+    // 1. Fetch Profile
+    const profileRes = await fetch(`${backendUrl}/api/profile`, {
+      headers: { Cookie: `auth_token=${authToken}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (profileRes.ok) {
+      const profile = await profileRes.json();
+      gridSkin = profile.gridSkin;
+      pawnSkin = profile.pawnSkin;
+    }
+
+    // 2. Fetch Game Info
+    const gameRes = await fetch(`${backendUrl}/api/games/${gameId}`, {
+      headers: { Cookie: `auth_token=${authToken}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (gameRes.ok) {
+      gameData = await gameRes.json();
+      if (gameData?.game?.status !== "in_progress") {
+        return Astro.redirect("/play");
+      }
+    } else {
+      return Astro.redirect("/play");
+    }
+
+    // 3. Fetch Opponent Info
+    const isP1 = gameData.game.player1Id === currentUser.id;
+    opponentId = isP1 ? gameData.game.player2Id : gameData.game.player1Id;
+    if (opponentId) {
+      const oppRes = await fetch(`${backendUrl}/api/users/${opponentId}`, {
+        headers: { Cookie: `auth_token=${authToken}` },
+        signal: AbortSignal.timeout(1500),
+      });
+      if (oppRes.ok) {
+        opponentData = await oppRes.json();
+      }
+    }
+
+    // 4. Fetch User Stats vs Players
+    const userStatsRes = await fetch(`${backendUrl}/api/users/${currentUser.id}/stats?is_ai=false`, {
+      headers: { Cookie: `auth_token=${authToken}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (userStatsRes.ok) {
+      userStats = await userStatsRes.json();
+    }
+  } catch (e) {
+    if (!gameData) {
+      return Astro.redirect("/play");
+    }
+  }
+}
+
+const timePerPlayerSeconds = gameData?.game?.timePerPlayerSeconds ?? 180;
+const isAiOpponent = gameData?.game?.isAiOpponent ?? false;
+
+const opponent = {
+  username: opponentData?.username ?? "Opponent",
+  initial: opponentData?.username ? opponentData.username.charAt(0).toUpperCase() : "O",
+  rating: opponentData?.rating ?? 1000,
+  gamesPlayed: opponentData?.gamesPlayed ?? 0,
+  status: opponentData?.status ?? "offline",
+};
+
+const userPlayStats = {
+  rating: currentUser.rating ?? 1000,
+  gamesPlayed: currentUser.gamesPlayed ?? 0,
+  formLast5: userStats?.form ? userStats.form.slice(-5) : [],
+  currentStreak: userStats?.streaks?.current ?? 0,
+  longestStreak: userStats?.streaks?.longest ?? 0,
+};
+
+interface ChatMessage {
+  id: number;
+  from: "me" | "opponent";
+  text: string;
+  time: string;
+}
+const messages: ChatMessage[] = [
+  { id: 1, from: "opponent", text: "glhf!",                    time: "14:02" },
+  { id: 2, from: "me",       text: "you too 🙂",               time: "14:02" },
+  { id: 3, from: "opponent", text: "nice move",                time: "14:04" },
+  { id: 4, from: "me",       text: "thanks, didn't see that coming", time: "14:05" },
+];
+
+const cardCls = "rounded-xl border border-border bg-surface text-surface-foreground";
+---
+
+<RootLayout
+  title={`Game vs ${opponent.username} — 4thewin`}
+  description="Connect 4 multiplayer"
+>
+  <main
+    id="main"
+    class="relative mx-auto flex w-full max-w-7xl flex-col px-margin-mobile pt-28 pb-8 md:h-full md:overflow-hidden md:px-margin-desktop md:pt-28 md:pb-12"
+  >
+    <div class="grid grid-cols-1 gap-16 md:flex-1 md:grid-cols-12 md:items-center md:gap-gutter">
+
+      {/* ── Left column: Chat panel ─────────────────────────────────────── */}
+      <div
+        class="page-reveal order-2 flex justify-center md:order-1 md:col-span-3 md:justify-end md:pr-gutter"
+        style="--reveal-delay: 0s"
+      >
+        <div class="w-full max-w-[280px] h-[450px] flex">
+          <ChatInterface
+            currentUserId={currentUser.id}
+            currentUsername={currentUser.username}
+            embeddedOpponentId={opponentId ?? undefined}
+            client:load
+          />
+        </div>
+      </div>
+
+      {/* ── Center column: Board ─────────────────────────────────────────── */}
+      <div class="order-1 flex flex-col items-center gap-6 md:order-2 md:col-span-6 md:gap-6 relative">
+        <div class="md:absolute md:bottom-[calc(100%+1.5rem)] md:left-1/2 md:-translate-x-1/2 md:w-auto">
+          <PlayerTimer pawnSkin={pawnSkin} client:load />
+        </div>
+        <div
+          class="page-reveal relative"
+          style="--reveal-delay: 0.2s"
+        >
+          <Board
+            gameId={gameId}
+            userId={currentUser.id}
+            timeLimit={timePerPlayerSeconds}
+            isAi={isAiOpponent}
+            variant={gridSkin as any}
+            pawnSkin={pawnSkin}
+            client:load
+          />
+          <EndGameOverlay authed={authed} client:load />
+        </div>
+      </div>
+
+      {/* ── Right column: Opponent card + controls ─────────────────────── */}
+      <div
+        class="page-reveal order-3 flex justify-center md:order-3 md:col-span-3 md:justify-start md:pl-gutter"
+        style="--reveal-delay: 0s"
+      >
+        <RightToolPanel
+          isAi={false}
+          opponentName="Vs Player"
+          opponentRating={`${userPlayStats.rating}${userPlayStats.gamesPlayed < 20 ? "?" : ""}`}
+          totalGames={userPlayStats.gamesPlayed}
+          currentStreak={userPlayStats.currentStreak}
+          longestStreak={userPlayStats.longestStreak}
+          formLast5={userPlayStats.formLast5}
+          pawnSkin={pawnSkin}
+          opponentId={opponentId}
+          client:load
+        />
+      </div>
+
+    </div>
+  </main>
+
+  {/* SVG filter for liquid-glass board variant */}
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none;">
+    <defs>
+      <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="2" seed="92" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+        <feDisplacementMap in="SourceGraphic" in2="blurred" scale="70" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+
+</RootLayout>

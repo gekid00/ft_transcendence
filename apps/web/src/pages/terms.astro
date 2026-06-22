@@ -1,0 +1,79 @@
+---
+import RootLayout from "~/layouts/RootLayout.astro";
+
+const lastUpdated = "May 2026";
+
+const sections = [
+  {
+    title: "Your account",
+    body: `You are responsible for the security of your credentials and the activity on your account. Choose a username that is neither offensive nor impersonating others — we may delete accounts that abuse this rule.`,
+  },
+  {
+    title: "Acceptable use",
+    body: `Do not harass, threaten, or spam other players. Do not cheat, exploit bugs, or disrupt games. Do not attempt to break, overload, or attack the platform. Do not upload illegal or offensive content as your avatar.`,
+  },
+  {
+    title: "Uploaded content",
+    body: `You retain ownership of what you upload (avatar, bio). By uploading it, you grant us permission to display it within the platform as part of normal use. You are responsible for having the right to use any content you upload.`,
+  },
+  {
+    title: "Availability",
+    body: `The service is provided "as is." As a school project, it may go down, lose data, or change at any time without notice. Do not rely on it for anything important.`,
+  },
+  {
+    title: "Termination",
+    body: `You can delete your account at any time from your settings. We may suspend accounts that violate these terms.`,
+  },
+];
+---
+
+<RootLayout title="4thewin — Terms of Service" description="The rules for using 4thewin.">
+  <main
+    id="main"
+    class="mx-auto w-full max-w-3xl flex-1 px-margin-mobile pt-[120px] pb-20 md:pt-[150px]"
+  >
+    <header class="page-reveal flex flex-col gap-4" style="--reveal-delay: 0.1s">
+      <span class="font-mono text-mono-sm uppercase text-accent">Legal</span>
+      <h1 class="font-display text-5xl font-semibold tracking-tight text-foreground md:text-6xl">
+        Terms of <span class="italic font-light">service</span>
+      </h1>
+      <p class="font-mono text-mono-sm uppercase text-muted-foreground">
+        Last updated · {lastUpdated}
+      </p>
+    </header>
+
+    <p class="page-reveal mt-8 font-display text-xl font-light italic leading-relaxed text-foreground/70" style="--reveal-delay: 0.25s">
+      A free, non-commercial project — no warranties, no subscriptions, no fine print.
+    </p>
+
+    <hr class="page-reveal mt-10 border-t border-border" style="--reveal-delay: 0.35s" />
+
+    <div class="mt-10 flex flex-col">
+      {sections.map((s, i) => (
+        <section
+          class="page-reveal grid gap-3 border-t border-border/60 py-8 first:border-t-0 md:grid-cols-[3rem_1fr] md:gap-8"
+          style={`--reveal-delay: ${0.4 + i * 0.1}s`}
+        >
+          <span class="font-mono text-mono-md text-accent md:pt-1">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <div class="flex flex-col gap-3">
+            <h2 class="font-display text-2xl font-semibold tracking-tight text-foreground">
+              {s.title}
+            </h2>
+            <p class="leading-relaxed text-foreground/80">{s.body}</p>
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <div class="page-reveal mt-12 flex justify-center" style="--reveal-delay: 1s">
+      <a
+        href="/"
+        class="font-mono text-mono-md uppercase text-muted-foreground underline underline-offset-4 decoration-transparent transition-colors duration-75 hover:text-accent hover:decoration-accent"
+      >
+        ← Back to home
+      </a>
+    </div>
+  </main>
+</RootLayout>

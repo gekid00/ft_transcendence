@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .glyph {
+      font-family: "Fraunces Variable", ui-serif, Georgia, serif;
+      font-size: 26px;
+      font-style: italic;
+      font-weight: 700;
+      fill: #1f2937;
+    }
+    @media (prefers-color-scheme: dark) {
+      .glyph { fill: #f5f5f5; }
+    }
+  </style>
+  <text x="50%" y="78%" text-anchor="middle" class="glyph">4</text>
+</svg>

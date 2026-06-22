@@ -1,0 +1,54 @@
+---
+/**
+ * /login — sign-in page for returning users.
+ *
+ * Composition mirrors /signup?step=1's card layout (focused max-w-md card)
+ * but without the SignupProgress tracker — login is a single screen, not
+ * a multi-step flow.
+ *
+ * Access control: authed users redirect to / (they're already signed in;
+ * the page would just bounce them back via the LoginForm anyway).
+ *
+ * The 42 OAuth button passes ?intent=login — the /api/auth/42/callback
+ * routes existing OAuth accounts to / on success (no /signup?step=3
+ * redirect like the signup intent).
+ */
+import RootLayout from "~/layouts/RootLayout.astro";
+import { LoginForm } from "~/components/auth/LoginForm";
+import { buttonVariants } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
+import { isAuthenticated } from "~/lib/auth";
+
+if (await isAuthenticated(Astro)) {
+  return Astro.redirect("/");
+}
+---
+
+<RootLayout title="4thewin — Login" description="Sign in to continue." showFooter>
+  <main
+    id="main"
+    class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-10 px-margin-mobile pt-[126px] pb-4 md:pt-[113px] md:pb-0"
+  >
+    <div class="flex flex-col gap-6 rounded-xl border border-border bg-surface p-6 shadow-sm md:p-8">
+      <LoginForm client:load />
+
+      {/* Divider — visual + a11y hint for the OR-style alternative */}
+      <div class="relative flex items-center gap-3" role="separator" aria-label="or continue with">
+        <span class="h-px flex-1 bg-border"></span>
+        <span class="font-mono text-mono-sm uppercase text-muted-foreground">or</span>
+        <span class="h-px flex-1 bg-border"></span>
+      </div>
+
+      <a
+        href="/api/auth/42?intent=login"
+        class={cn(buttonVariants({ variant: "brand-outline", size: "pill" }), "h-11 gap-2 px-6 text-mono-md")}
+      >
+        Continue with 42
+      </a>
+    </div>
+
+    <p class="text-center font-mono text-mono-sm uppercase text-muted-foreground">
+      Don't have an account? <a href="/signup" class="font-bold text-emphasis underline underline-offset-4 transition-opacity hover:opacity-70 focus-visible:opacity-70">Sign up</a>
+    </p>
+  </main>
+</RootLayout>

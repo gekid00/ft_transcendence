@@ -1,0 +1,61 @@
+---
+/**
+ * Signup — 4-step onboarding flow.
+ *
+ * Reads ?step=N from the URL (1..4). Defaults to 1; clamps invalid values.
+ * Each step renders inside SignupShell which carries the SignupProgress
+ * tracker. URL-driven state means back/forward buttons just work.
+ *
+ * Access control:
+ *   - Steps 1 and 2 are for users without an account. If the request is
+ *     already authenticated, redirect to / (they're done with signup).
+ *   - Steps 3 and 4 assume an account was just created (auth_token cookie
+ *     set by /api/auth/signup or /api/auth/42/callback). Without auth,
+ *     redirect back to step 1 so the user can sign up first instead of
+ *     filling in a profile form that's going to 401 on submit.
+ *   - Once the user reaches step 4 the backend marks `signupCompletedAt`
+ *     on their row. From that point on any /signup URL redirects them to
+ *     / — the form is one-shot and not a profile editor (future /settings
+ *     page handles ongoing edits).
+ */
+import SignupShell from "~/components/signup/SignupShell.astro";
+import Step1Save from "~/components/signup/Step1Save.astro";
+import { Step2Credentials } from "~/components/signup/Step2Credentials";
+import { Step3Profile } from "~/components/signup/Step3Profile";
+import Step4Welcome from "~/components/signup/Step4Welcome.astro";
+import { getCurrentUser } from "~/lib/auth";
+
+const stepParam = Astro.url.searchParams.get("step");
+const parsed = Number(stepParam);
+const step = (Number.isFinite(parsed) && parsed >= 1 && parsed <= 4 ? parsed : 1) as 1 | 2 | 3 | 4;
+
+const TITLES: Record<typeof step, string> = {
+  1: "Save your spot",
+  2: "Credentials",
+  3: "Make it yours",
+  4: "Welcome",
+};
+
+const user = await getCurrentUser(Astro);
+const authed = user !== null;
+const signupDone = user?.signupCompletedAt !== null && user?.signupCompletedAt !== undefined;
+
+// Once signup is fully done, /signup is read-only territory — bail out.
+if (signupDone) {
+  return Astro.redirect("/");
+}
+// Otherwise apply the per-step gate as before.
+if ((step === 1 || step === 2) && authed) {
+  return Astro.redirect("/");
+}
+if ((step === 3 || step === 4) && !authed) {
+  return Astro.redirect("/signup?step=1");
+}
+---
+
+<SignupShell current={step} title={TITLES[step]} wide={step === 3}>
+  {step === 1 ? <Step1Save /> : null}
+  {step === 2 ? <Step2Credentials client:load /> : null}
+  {step === 3 ? <Step3Profile client:load /> : null}
+  {step === 4 ? <Step4Welcome /> : null}
+</SignupShell>

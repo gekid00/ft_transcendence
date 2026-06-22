@@ -1,0 +1,22 @@
+---
+import RootLayout from "~/layouts/RootLayout.astro";
+import { getCurrentUser } from "~/lib/auth";
+import ChatInterface from "~/components/chat/ChatInterface";
+
+const currentUser = await getCurrentUser(Astro);
+if (!currentUser) {
+  return Astro.redirect("/signup?step=1");
+}
+---
+
+<RootLayout
+  title="Messages — 4thewin"
+  description="Chat directly with other players, challenge friends, and plan matches."
+>
+  <main
+    id="main"
+    class="relative mx-auto flex w-full max-w-[1500px] flex-1 flex-col px-margin-mobile pt-24 pb-4 md:px-margin-desktop md:pt-20 md:pb-8 min-h-0 h-[calc(100dvh-6rem)] md:h-[calc(100dvh-7rem)]"
+  >
+    <ChatInterface client:only="react" currentUserId={currentUser.id} currentUsername={currentUser.username} />
+  </main>
+</RootLayout>

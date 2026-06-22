@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "grid_skin" SET DEFAULT 'liquid-glass';
